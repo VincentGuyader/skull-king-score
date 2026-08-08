@@ -24,7 +24,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Vérifier la syntaxe de l'application
-        run: node --check <(sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d')
+        # `node --check <(...)` echoue : node resout /dev/fd/63 en
+        # /proc/<pid>/fd/pipe:[...] et readFileSync renvoie ENOENT. Meme
+        # controle, via un vrai fichier.
+        run: |
+          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > "${RUNNER_TEMP}/app-block.js"
+          node --check "${RUNNER_TEMP}/app-block.js"
 
       - name: Horodater la version du service worker
         run: |
