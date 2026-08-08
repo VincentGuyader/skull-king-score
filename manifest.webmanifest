@@ -1,0 +1,17 @@
+{
+  "name": "Skull King Score",
+  "short_name": "Skull King",
+  "description": "Compteur de points pour Skull King : annonces, plis, bonus, règles maison et hall of fame. Fonctionne hors-ligne.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d151d",
+  "theme_color": "#0d151d",
+  "lang": "fr",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
