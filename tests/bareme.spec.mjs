@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { boot, watchErrors, roster, game, round, blank, table, head, setCounter } from './helpers.mjs';
+import { boot, watchErrors, roster, game, round, blank, table, head, setCounter, tapBar } from './helpers.mjs';
 
 /* Le bareme est le coeur du produit : ces cas viennent des regles officielles
    et servent de reference a toute modification du moteur. */
@@ -93,7 +93,7 @@ test('une partie jouee a l interface donne les totaux calcules a la main', async
   ]);
 
   /* Manche 2, deux cartes : Anne annonce 2 et les prend, les autres passent. */
-  await page.locator('#next').click();
+  await tapBar(page, '#next');
   await setCounter(page, 0, 2);
   await page.locator('#ok').click();
   await setCounter(page, 0, 2);
@@ -104,7 +104,7 @@ test('une partie jouee a l interface donne les totaux calcules a la main', async
   ]);
 
   /* Manche 3, trois cartes : Anne annonce 0 mais prend un pli. */
-  await page.locator('#next').click();
+  await tapBar(page, '#next');
   await setCounter(page, 1, 2);
   await setCounter(page, 2, 1);
   await page.locator('#ok').click();
