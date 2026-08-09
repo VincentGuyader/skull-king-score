@@ -2719,7 +2719,11 @@ if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
 }
 load();
-if(G) view = G.rounds.every(r=>r.locked) ? 'scores' : 'round';
+/* Une manche deja verrouillee n'est pas un ecran de saisie : apres une
+   validation, un rechargement doit retomber sur les scores, pas rouvrir la
+   manche qui vient d'etre comptee. */
+if(G) view = (G.rounds.every(r=>r.locked) || (G.rounds[G.cur] && G.rounds[G.cur].locked))
+  ? 'scores' : 'round';
 else { draft=newDraft(); view='setup'; }
 render();
 /* ===== Actions globales ============================================== */
