@@ -2729,16 +2729,27 @@ function doExport(){
   const txt=JSON.stringify(data);
   const blob=new Blob([txt],{type:'application/json'});
   const name='skull-king-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json';
+  /* Sur Android et iOS, c'est le chemin de partage qui sert. L'ancien code
+     y sortait avant d'avoir note la sauvegarde : la banniere de rappel
+     revenait indefiniment et rien ne confirmait l'export au joueur. */
+  const note=()=>{
+    Store.set('sk_exported_count', archive().length);
+    Store.set('sk_backup_snooze', 0);
+    toast(T.exported);
+    if(view==='hof') render();
+  };
   try{
     const file=new File([blob],name,{type:'application/json'});
-    if(navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file], title:name}); return; }
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      /* Un partage abandonne rejette : la sauvegarde n'est alors pas notee. */
+      Promise.resolve(navigator.share({files:[file], title:name})).then(note, ()=>{});
+      return;
+    }
   }catch(e){}
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-  Store.set('sk_exported_count', archive().length);
-  Store.set('sk_backup_snooze', 0);
-  toast(T.exported);
+  note();
 }
 
 /* ===== En-tête & démarrage =========================================== */
