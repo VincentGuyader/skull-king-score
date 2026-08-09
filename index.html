@@ -40,7 +40,7 @@ header .ttl{flex:1;min-width:0}
 header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header .sub{font-size:12.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .iconbtn{
-  width:40px;height:40px;flex:0 0 40px;border-radius:12px;border:1px solid var(--line);
+  width:44px;height:44px;flex:0 0 44px;border-radius:12px;border:1px solid var(--line);
   background:var(--surface);color:var(--ink-2);display:grid;place-items:center;font-size:17px;cursor:pointer;
 }
 .iconbtn:active{background:var(--surface-2)}
@@ -65,7 +65,7 @@ button{font-family:inherit;font-size:16px}
 .btn[disabled]{background:var(--surface-2);color:var(--muted);font-weight:600}
 .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);font-weight:600}
 .btn.danger{background:transparent;color:var(--danger);border:1px solid rgba(208,59,59,.4);font-weight:600}
-.btn.sm{min-height:42px;font-size:14.5px;border-radius:11px}
+.btn.sm{min-height:44px;font-size:14.5px;border-radius:11px}
 input[type=text]{
   width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);
   border-radius:11px;padding:12px 12px;font-size:16px;font-family:inherit;min-height:var(--tap);
@@ -123,7 +123,7 @@ input[type=text]:focus{outline:2px solid var(--gold-dim);outline-offset:0}
 .pchip .pk{width:26px;flex:0 0 26px;text-align:center;font-size:17px}
 .wgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px 0 2px}
 .star{
-  width:42px;height:42px;flex:0 0 42px;border-radius:12px;border:1px solid var(--line);
+  width:44px;height:44px;flex:0 0 44px;border-radius:12px;border:1px solid var(--line);
   background:var(--surface-2);color:var(--muted);font-size:17px;cursor:pointer;display:grid;place-items:center;
 }
 .star.on{border-color:rgba(224,181,103,.5);color:var(--gold);background:rgba(224,181,103,.10)}
@@ -184,7 +184,7 @@ input[type=text]:focus{outline:2px solid var(--gold-dim);outline-offset:0}
 .brow .lbl small{display:block;color:var(--muted);font-size:12.5px}
 .step{display:flex;align-items:center;gap:4px;flex:0 0 auto}
 .step button{
-  width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--surface-2);
+  width:44px;height:44px;border-radius:11px;border:1px solid var(--line);background:var(--surface-2);
   color:var(--ink);font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;
 }
 .step button:disabled{opacity:.32}
@@ -207,7 +207,7 @@ input[type=text]:focus{outline:2px solid var(--gold-dim);outline-offset:0}
 .rule:last-child{border-bottom:0}
 .rule .lbl{flex:1;min-width:0}
 .rule .lbl small{display:block;color:var(--muted);font-size:12.5px}
-.mini{width:38px;height:38px;flex:0 0 38px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);font-size:15px;cursor:pointer;display:grid;place-items:center}
+.mini{width:44px;height:44px;flex:0 0 44px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);font-size:15px;cursor:pointer;display:grid;place-items:center}
 /* ---------- tuiles de statistiques ---------- */
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 4px;text-align:center}
@@ -789,6 +789,9 @@ fr:{
   restored:'Historique restauré', badFile:'Fichier illisible', exported:'Fichier exporté',
   badGames:n=>'Sauvegarde refusée : '+n+' partie'+(n>1?'s sont inexploitables':' est inexploitable')+'. Rien n’a été modifié.',
   copied:'Résultat copié', maxEight:'8 joueurs maximum',
+  aLess:'Moins', aMore:'Plus', aBack:'Revenir à l’écran précédent',
+  aEdit:'Modifier', aMerge:'Fusionner', aRemove:'Supprimer',
+  dupName:'Une autre fiche porte déjà ce prénom. Ajoutez une initiale pour les distinguer.',
   wagerNote:v=>'Pari du Rascal : +'+v+' si l’annonce est juste, −'+v+' sinon. Compté à part.',
   otherTab:'Une autre fenêtre a démarré une partie. Vos saisies ne sont plus enregistrées ici, pour ne pas écraser la sienne.',
   otherTabReload:'Reprendre la partie enregistrée',
@@ -975,6 +978,9 @@ en:{
   restored:'History restored', badFile:'Unreadable file', exported:'File exported',
   badGames:n=>'Backup rejected: '+n+' game'+(n>1?'s are':' is')+' unusable. Nothing was changed.',
   copied:'Result copied', maxEight:'8 players maximum',
+  aLess:'Less', aMore:'More', aBack:'Back to the previous screen',
+  aEdit:'Edit', aMerge:'Merge', aRemove:'Delete',
+  dupName:'Another profile already uses this name. Add an initial to tell them apart.',
   wagerNote:v=>'Rascal wager: +'+v+' on a correct bid, −'+v+' otherwise. Counted separately.',
   otherTab:'Another window started a game. Your entries are no longer saved here, so they cannot overwrite it.',
   otherTabReload:'Load the saved game',
@@ -1160,6 +1166,9 @@ de:{
   restored:'Chronik wiederhergestellt', badFile:'Datei nicht lesbar', exported:'Datei exportiert',
   badGames:n=>'Sicherung abgelehnt: '+n+' Partie'+(n>1?'n sind':' ist')+' unbrauchbar. Nichts wurde geändert.',
   copied:'Ergebnis kopiert', maxEight:'höchstens 8 Spieler',
+  aLess:'Weniger', aMore:'Mehr', aBack:'Zurück zum vorigen Bildschirm',
+  aEdit:'Bearbeiten', aMerge:'Zusammenführen', aRemove:'Löschen',
+  dupName:'Ein anderes Profil trägt diesen Namen bereits. Ergänze eine Initiale zur Unterscheidung.',
   wagerNote:v=>'Rascal-Wette: +'+v+' bei richtiger Ansage, −'+v+' sonst. Zählt separat.',
   otherTab:'Ein anderes Fenster hat eine Partie gestartet. Deine Eingaben werden hier nicht mehr gespeichert, damit sie jene nicht überschreiben.',
   otherTabReload:'Gespeicherte Partie laden',
@@ -1345,6 +1354,9 @@ es:{
   restored:'Historial restaurado', badFile:'Archivo ilegible', exported:'Archivo exportado',
   badGames:n=>'Copia rechazada: '+n+' partida'+(n>1?'s son inservibles':' es inservible')+'. No se ha cambiado nada.',
   copied:'Resultado copiado', maxEight:'8 jugadores como máximo',
+  aLess:'Menos', aMore:'Más', aBack:'Volver a la pantalla anterior',
+  aEdit:'Editar', aMerge:'Fusionar', aRemove:'Eliminar',
+  dupName:'Otra ficha ya usa este nombre. Añade una inicial para distinguirlas.',
   wagerNote:v=>'Apuesta del Rascal: +'+v+' si la apuesta es exacta, −'+v+' si no. Se cuenta aparte.',
   otherTab:'Otra ventana ha empezado una partida. Tus entradas ya no se guardan aquí, para no sobrescribirla.',
   otherTabReload:'Cargar la partida guardada',
@@ -1604,6 +1616,9 @@ function renderView(){
   app.innerHTML=''; bar.innerHTML=''; hint.textContent=''; hint.className='hint';
   hint.onclick=null; hint.style.cursor=''; refreshRMap();
   $('#hBack').style.display = backStack.length ? 'grid' : 'none';
+  $('#hBack').setAttribute('aria-label', T.aBack);
+  $('#hHelp').setAttribute('aria-label', T.helpTitle);
+  $('#hMenu').setAttribute('aria-label', T.menu);
   if(view==='setup') renderSetup();
   else if(view==='round') renderRound();
   else if(view==='scores') renderScores();
@@ -1746,7 +1761,7 @@ function renderCustoms(cfg, box){
     if(c.retired) return;
     const row=h(`<div class="rule">
       <div class="lbl"><div>${esc(c.name)}</div><small>${sgn(c.pts)} pts${c.tricks?' · '+T.ruleTricksTag(c.tricks):''} · ${T.ruleMaxTag(c.max)} · ${c.cond==='bid'?T.ruleTagOn:T.ruleTagOff}</small></div>
-      <button class="mini ed">✎</button><button class="mini rm">×</button></div>`);
+      <button class="mini ed" aria-label="${esc(T.aEdit + ' ' + c.name)}">✎</button><button class="mini rm" aria-label="${esc(T.aRemove + ' ' + c.name)}">×</button></div>`);
     row.querySelector('.ed').onclick=()=>ruleSheet(cfg, i, ()=>renderCustoms(cfg, box));
     row.querySelector('.rm').onclick=()=>{
       /* Jamais pointée : on l'efface. Déjà pointée dans une manche validée :
@@ -1808,9 +1823,10 @@ function ruleSheet(cfg, i, after){
   };
 }
 
-function stepper(node, val, min, max, cb){
+function stepper(node, val, min, max, cb, label){
   node.innerHTML='';
-  const el=h(`<button class="minus">−</button><div class="v">${val}</div><button class="plus">+</button>`);
+  const nom = label ? ' ' + label : '';
+  const el=h(`<button class="minus" aria-label="${esc(T.aLess + nom)}">−</button><div class="v" role="status" aria-live="polite">${val}</div><button class="plus" aria-label="${esc(T.aMore + nom)}">+</button>`);
   node.appendChild(el);
   const v=node.querySelector('.v');
   const upd=n=>{ val=Math.max(min,Math.min(max,n)); v.textContent=val; buzz();
@@ -1855,7 +1871,7 @@ function renderRound(){
       ${avatar(p,i)}
       <div class="grow"><div class="nm">${esc(p.name)}</div><div class="sub2"></div></div>
       ${bidding?'':`<button class="star" title="${esc(T.bonusTitle)}" aria-label="${esc(T.bonusTitle)}">★</button>`}
-      <div class="step big"><button class="minus">−</button><div class="v"></div><button class="plus">+</button></div>
+      <div class="step big"><button class="minus" aria-label="${esc(T.aLess + ' ' + p.name)}">−</button><div class="v" role="status" aria-live="polite"></div><button class="plus" aria-label="${esc(T.aMore + ' ' + p.name)}">+</button></div>
     </div>`);
     const card=frag.firstElementChild;
     const vEl=card.querySelector('.v'), subEl=card.querySelector('.sub2'), starEl=card.querySelector('.star');
@@ -2326,6 +2342,7 @@ function playerEditSheet(id, cb){
   openSheet(`<h3>${existing?T.editPlayerTitle:T.newPlayerTitle}</h3>
     <div id="prev"></div>
     <input type="text" id="pn" placeholder="${T.firstName}" maxlength="18" value="${esc(st.name)}">
+    <div class="small" id="pdup" style="color:var(--warn);margin-top:4px"></div>
     <h2 style="margin:16px 0 2px">${T.colorTitle}</h2>
     <div class="cgrid" id="cg"></div>
     <div class="row" style="gap:8px;margin-top:2px">
@@ -2358,7 +2375,16 @@ function playerEditSheet(id, cb){
     eg.appendChild(b);
   });
   paintPrev();
-  $('#pn').oninput=e=>{ st.name=e.target.value; };
+  /* Deux fiches peuvent legitimement porter le meme prenom, mais rien ne les
+     distinguait ensuite dans la selection de partie : on le signale sans
+     l'interdire. */
+  const dup=()=>{
+    const n=(st.name||'').trim().toLowerCase();
+    const pris = n && roster().some(x=>x.id!==id && (x.name||'').trim().toLowerCase()===n);
+    $('#pdup').textContent = pris ? T.dupName : '';
+  };
+  $('#pn').oninput=e=>{ st.name=e.target.value; dup(); };
+  dup();
   if(!existing) setTimeout(()=>$('#pn').focus(), 260);
   $('#pca').onclick=closeSheet;
   $('#pok').onclick=()=>{
@@ -2399,7 +2425,7 @@ function renderRoster(){
     const row=h(`<div class="pr">
       ${avatar(p,i)}
       <div class="grow"><div class="nm">${esc(p.name)}</div><div class="sub2">${T.gamesCount(count(p.id))}</div></div>
-      <button class="mini ed">✎</button><button class="mini mg">⇄</button><button class="mini rm">×</button></div>`);
+      <button class="mini ed" aria-label="${esc(T.aEdit + ' ' + p.name)}">✎</button><button class="mini mg" aria-label="${esc(T.aMerge + ' ' + p.name)}">⇄</button><button class="mini rm" aria-label="${esc(T.aRemove + ' ' + p.name)}">×</button></div>`);
     row.querySelector('.ed').onclick=()=>playerEditSheet(p.id, ()=>render());
     row.querySelector('.mg').onclick=()=>mergeSheet(p.id);
     row.querySelector('.rm').onclick=()=>{
