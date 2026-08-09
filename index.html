@@ -694,6 +694,7 @@ fr:{
   backupCount:(g,p)=>g+' parties · '+p+' joueurs',
   mergeOrReplace:'OK pour FUSIONNER avec l’historique actuel.\nAnnuler pour REMPLACER tout l’historique.',
   restored:'Historique restauré', badFile:'Fichier illisible', exported:'Fichier exporté',
+  badGames:n=>'Sauvegarde refusée : '+n+' partie'+(n>1?'s sont inexploitables':' est inexploitable')+'. Rien n’a été modifié.',
   copied:'Résultat copié', maxEight:'8 joueurs maximum',
   /* menu */
   mScores:'Voir les scores', mRules:'Règles maison', mHof:'Hall of fame',
@@ -867,6 +868,7 @@ en:{
   backupCount:(g,p)=>g+' games · '+p+' players',
   mergeOrReplace:'OK to MERGE with the current history.\nCancel to REPLACE the whole history.',
   restored:'History restored', badFile:'Unreadable file', exported:'File exported',
+  badGames:n=>'Backup rejected: '+n+' game'+(n>1?'s are':' is')+' unusable. Nothing was changed.',
   copied:'Result copied', maxEight:'8 players maximum',
   mScores:'View the scores', mRules:'House rules', mHof:'Hall of fame',
   mRoster:'Player roster', mHelp:'Rules quick reference', mShare:'Share the score',
@@ -1039,6 +1041,7 @@ de:{
   backupCount:(g,p)=>g+' Partien · '+p+' Spieler',
   mergeOrReplace:'OK, um mit der aktuellen Chronik ZUSAMMENZUFÜHREN.\nAbbrechen, um die gesamte Chronik zu ERSETZEN.',
   restored:'Chronik wiederhergestellt', badFile:'Datei nicht lesbar', exported:'Datei exportiert',
+  badGames:n=>'Sicherung abgelehnt: '+n+' Partie'+(n>1?'n sind':' ist')+' unbrauchbar. Nichts wurde geändert.',
   copied:'Ergebnis kopiert', maxEight:'höchstens 8 Spieler',
   mScores:'Punkte ansehen', mRules:'Hausregeln', mHof:'Ruhmeshalle',
   mRoster:'Spielerliste', mHelp:'Regel-Spickzettel', mShare:'Punkte teilen',
@@ -1211,6 +1214,7 @@ es:{
   backupCount:(g,p)=>g+' partidas · '+p+' jugadores',
   mergeOrReplace:'Aceptar para FUSIONAR con el historial actual.\nCancelar para SUSTITUIR todo el historial.',
   restored:'Historial restaurado', badFile:'Archivo ilegible', exported:'Archivo exportado',
+  badGames:n=>'Copia rechazada: '+n+' partida'+(n>1?'s son inservibles':' es inservible')+'. No se ha cambiado nada.',
   copied:'Resultado copiado', maxEight:'8 jugadores como máximo',
   mScores:'Ver la puntuación', mRules:'Reglas de la casa', mHof:'Salón de la fama',
   mRoster:'Listado de jugadores', mHelp:'Chuleta de reglas', mShare:'Compartir la puntuación',
@@ -2380,6 +2384,26 @@ function manualGameSheet(existing){
 }
 
 /* ---------- Sauvegarde vers un fichier ---------- */
+/* Une partie exploitable : des joueurs identifies, des manches lisibles.
+   Sans ces garanties, l'ecran des scores et le hall of fame lèvent. */
+function validGame(g){
+  if(!g || typeof g!=='object' || Array.isArray(g)) return false;
+  if(!Array.isArray(g.players) || !g.players.length) return false;
+  if(!g.players.every(p=>p && typeof p==='object' && typeof p.id==='string' && p.id)) return false;
+  if(g.rounds!=null && !Array.isArray(g.rounds)) return false;
+  return true;
+}
+/* Inspecte une sauvegarde AVANT d'ecrire quoi que ce soit. Renvoie le contenu
+   a poser, ou {bad:n} quand n parties sont inexploitables, ou null si le
+   fichier n'a pas la forme d'une sauvegarde. */
+function readBackup(d){
+  if(!d || typeof d!=='object' || Array.isArray(d)) return null;
+  if(!Array.isArray(d.archive)) return null;
+  if(d.roster!=null && !Array.isArray(d.roster)) return null;
+  const bad=d.archive.filter(g=>!validGame(g)).length;
+  if(bad) return {bad};
+  return {archive:d.archive, roster:d.roster||[]};
+}
 function backupSheet(){
   openSheet(`<h3>${T.backupTitle}</h3>
     <div class="small muted" style="margin-bottom:12px">${T.backupDesc}</div>
@@ -2395,20 +2419,23 @@ function backupSheet(){
     const f=e.target.files[0]; if(!f) return;
     const rd=new FileReader();
     rd.onload=()=>{
-      try{
-        const d=JSON.parse(rd.result);
-        if(!d || !Array.isArray(d.archive)) throw 0;
-        const mode=confirm(T.mergeOrReplace);
-        if(mode){
-          const a=archive(), ids=new Set(a.map(x=>x.id));
-          d.archive.forEach(g=>{ if(!ids.has(g.id)) a.push(g); });
-          saveArchive(a);
-          const r=roster(), rid=new Set(r.map(x=>x.id));
-          (d.roster||[]).forEach(p=>{ if(!rid.has(p.id)) r.push(p); });
-          saveRoster(r);
-        } else { saveArchive(d.archive); saveRoster(d.roster||[]); }
-        closeSheet(); toast(T.restored); goRoot('hof');
-      }catch(err){ toast(T.badFile); }
+      /* Le fichier est entierement valide avant la moindre ecriture : un
+         refus doit laisser l'historique exactement dans l'etat ou il etait. */
+      let d=null;
+      try{ d=JSON.parse(rd.result); }catch(err){ toast(T.badFile); return; }
+      const ok=readBackup(d);
+      if(!ok){ toast(T.badFile); return; }
+      if(ok.bad){ toast(T.badGames(ok.bad)); return; }
+      const mode=confirm(T.mergeOrReplace);
+      if(mode){
+        const a=archive(), ids=new Set(a.map(x=>x.id));
+        ok.archive.forEach(g=>{ if(!ids.has(g.id)) a.push(g); });
+        saveArchive(a);
+        const r=roster(), rid=new Set(r.map(x=>x.id));
+        ok.roster.forEach(p=>{ if(p && !rid.has(p.id)) r.push(p); });
+        saveRoster(r);
+      } else { saveArchive(ok.archive); saveRoster(ok.roster); }
+      closeSheet(); toast(T.restored); goRoot('hof');
     };
     rd.readAsText(f);
   };
