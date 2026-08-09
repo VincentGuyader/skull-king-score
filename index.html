@@ -2672,7 +2672,7 @@ function readBackup(d){
   if(d.roster!=null && !Array.isArray(d.roster)) return null;
   const bad=d.archive.filter(g=>!validGame(g)).length;
   if(bad) return {bad};
-  return {archive:d.archive, roster:d.roster||[]};
+  return {archive:d.archive, roster:d.roster||[], cfg:d.cfg, lang:d.lang};
 }
 function backupSheet(){
   openSheet(`<h3>${T.backupTitle}</h3>
@@ -2726,6 +2726,17 @@ function applyBackup(ok, merge){
     ok.roster.forEach(p=>{ if(p && !rid.has(p.id)) r.push(p); });
     saveRoster(r);
   } else { saveArchive(ok.archive); saveRoster(ok.roster); }
+  /* Les préférences suivent l'historique. En remplacement, on adopte celles
+     du fichier ; en fusion, on ne pietine pas celles de l'appareil, sauf
+     quand il n'en a pas encore, cas d'une restauration sur stockage vide. */
+  const vierge = !Store.get('sk_cfg', null);
+  if(ok.cfg && (!merge || vierge)) Store.set('sk_cfg', safeCfg(ok.cfg));
+  if(ok.lang && I18N[ok.lang] && (!merge || !Store.get('sk_lang', null))) setLang(ok.lang, true);
+  /* Le fichier qui vient d'etre lu fait office de sauvegarde a jour : inutile
+     de reclamer un export dans la foulee. */
+  Store.set('sk_exported_count', archive().length);
+  Store.set('sk_backup_snooze', 0);
+  draft = null;
   closeSheet(); buzz(20); toast(T.restored); goRoot('hof');
 }
 
@@ -2768,7 +2779,7 @@ function installBanner(node){
 }
 
 function doExport(){
-  const data={v:1, exported:Date.now(), roster:roster(), archive:archive(), cfg:Store.get('sk_cfg',{})};
+  const data={v:1, exported:Date.now(), roster:roster(), archive:archive(), cfg:Store.get('sk_cfg',{}), lang:LANG};
   const txt=JSON.stringify(data);
   const blob=new Blob([txt],{type:'application/json'});
   const name='skull-king-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json';
