@@ -1,0 +1,46 @@
+name: Recette
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: recette-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Verifier la syntaxe de l'application
+        # `node --check <(...)` echoue : node resout /dev/fd/63 en
+        # /proc/<pid>/fd/pipe:[...] et readFileSync renvoie ENOENT. Meme
+        # controle, via un vrai fichier.
+        run: |
+          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > "${RUNNER_TEMP}/app-block.js"
+          node --check "${RUNNER_TEMP}/app-block.js"
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm test
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rapport-playwright
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

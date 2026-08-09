@@ -37,9 +37,18 @@ jobs:
           sed -i "s/const VERSION = 'sk-v1';/const VERSION = 'sk-${STAMP}';/" sw.js
           echo "Version du cache : sk-${STAMP}"
 
+      - name: Assembler le site
+        # Seuls les fichiers de l'application partent en ligne. Le harnais de
+        # recette, ses dependances et la configuration du depot restent ici.
+        run: |
+          mkdir -p _site
+          cp index.html sw.js manifest.webmanifest _site/
+          cp -r icons _site/
+          ls -R _site
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -1,0 +1,14 @@
+{
+  "name": "skull-king-score",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Compteur de points pour Skull King. Recette automatisee de l'application.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "serve": "node tests/server.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}
