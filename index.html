@@ -1367,7 +1367,9 @@ function freeIcon(){
   const used=roster().map(p=>p.icon);
   return PICTOS.find(c=>!used.includes(c)) || PICTOS[used.length%PICTOS.length];
 }
-function archive(){ return Store.get('sk_archive', []); }
+/* Une entree inexploitable est ignoree plutot que subie : elle faisait
+   echouer computeStats et gameResult, et emportait tout le hall of fame. */
+function archive(){ return asList(Store.get('sk_archive', [])).filter(validGame); }
 function saveArchive(l){ Store.set('sk_archive', l); }
 function archiveUpsert(g){
   const l=archive(), i=l.findIndex(x=>x.id===g.id);
