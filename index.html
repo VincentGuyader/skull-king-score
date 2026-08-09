@@ -353,7 +353,9 @@ function standings(game){
   });
   const tot = game.players.map(p=>({p, total:run[p.id], last: per[p.id].length?per[p.id][per[p.id].length-1].total:0}));
   tot.sort((a,b)=>b.total-a.total);
-  return {cum, per, tot, played: cum[game.players[0].id].length};
+  /* Une partie sans joueur n'a pas de manche jouée : le dire plutôt que de
+     lire l'identifiant d'un premier joueur qui n'existe pas. */
+  return {cum, per, tot, played: game.players.length ? cum[game.players[0].id].length : 0};
 }
 /* ===== Archive : résultat d'une partie ============================== */
 /* Une partie archivée a la même forme qu'une partie en cours.
@@ -507,6 +509,31 @@ const Store = (()=>{ let mem={};
     del(k){ try{ if(ok) localStorage.removeItem(k); else delete mem[k]; }catch(e){} }
   };
 })();
+
+/* ===== Robustesse des données ========================================
+   Le stockage est un fichier texte que n'importe quoi peut abîmer : une
+   version future, un import raté, une extension, une main humaine. Rien de
+   ce qui en sort n'est cru sur parole. */
+function asList(v){ return Array.isArray(v) ? v : []; }
+/* Une fiche exploitable : un identifiant stable, c'est tout ce dont
+   l'affichage a besoin pour retrouver couleur, picto et nom. */
+function validEntry(p){ return !!p && typeof p==='object' && typeof p.id==='string' && !!p.id; }
+/* Une partie exploitable : des joueurs identifiés, des manches lisibles.
+   Sans ces garanties, l'écran des scores et le hall of fame lèvent. */
+function validGame(g){
+  if(!g || typeof g!=='object' || Array.isArray(g)) return false;
+  if(!Array.isArray(g.players) || !g.players.length) return false;
+  if(!g.players.every(validEntry)) return false;
+  if(g.rounds!=null && !Array.isArray(g.rounds)) return false;
+  return true;
+}
+/* Configuration toujours utilisable : les règles maison sont parcourues à
+   chaque rendu, une valeur d'un autre type emportait tout l'écran. */
+function safeCfg(cfg){
+  const c = (cfg && typeof cfg==='object' && !Array.isArray(cfg)) ? cfg : {};
+  if(!Array.isArray(c.custom)) c.custom = [];
+  return c;
+}
 
 /* ===== Internationalisation ========================================== */
 /* Terminologie alignée sur les éditions officielles :
@@ -696,6 +723,9 @@ fr:{
   restored:'Historique restauré', badFile:'Fichier illisible', exported:'Fichier exporté',
   badGames:n=>'Sauvegarde refusée : '+n+' partie'+(n>1?'s sont inexploitables':' est inexploitable')+'. Rien n’a été modifié.',
   copied:'Résultat copié', maxEight:'8 joueurs maximum',
+  crashTitle:'Cet écran n’a pas pu s’afficher',
+  crashDesc:'Vos données sont conservées. Exportez-les avant toute chose, puis repartez sur une nouvelle partie si l’écran ne revient pas.',
+  crashReset:'Abandonner la partie en cours',
   /* menu */
   mScores:'Voir les scores', mRules:'Règles maison', mHof:'Hall of fame',
   mRoster:'Répertoire des joueurs', mHelp:'Aide-mémoire des règles', mShare:'Partager le score',
@@ -870,6 +900,9 @@ en:{
   restored:'History restored', badFile:'Unreadable file', exported:'File exported',
   badGames:n=>'Backup rejected: '+n+' game'+(n>1?'s are':' is')+' unusable. Nothing was changed.',
   copied:'Result copied', maxEight:'8 players maximum',
+  crashTitle:'This screen could not be displayed',
+  crashDesc:'Your data is safe. Export it first, then start a new game if the screen does not come back.',
+  crashReset:'Abandon the current game',
   mScores:'View the scores', mRules:'House rules', mHof:'Hall of fame',
   mRoster:'Player roster', mHelp:'Rules quick reference', mShare:'Share the score',
   backToScores:'Back to the scores', backToRound:n=>'Back to round '+n,
@@ -1043,6 +1076,9 @@ de:{
   restored:'Chronik wiederhergestellt', badFile:'Datei nicht lesbar', exported:'Datei exportiert',
   badGames:n=>'Sicherung abgelehnt: '+n+' Partie'+(n>1?'n sind':' ist')+' unbrauchbar. Nichts wurde geändert.',
   copied:'Ergebnis kopiert', maxEight:'höchstens 8 Spieler',
+  crashTitle:'Dieser Bildschirm konnte nicht angezeigt werden',
+  crashDesc:'Deine Daten bleiben erhalten. Exportiere sie zuerst und starte dann eine neue Partie, falls der Bildschirm nicht zurückkommt.',
+  crashReset:'Laufende Partie aufgeben',
   mScores:'Punkte ansehen', mRules:'Hausregeln', mHof:'Ruhmeshalle',
   mRoster:'Spielerliste', mHelp:'Regel-Spickzettel', mShare:'Punkte teilen',
   backToScores:'Zurück zur Wertung', backToRound:n=>'Zurück zu Durchgang '+n,
@@ -1216,6 +1252,9 @@ es:{
   restored:'Historial restaurado', badFile:'Archivo ilegible', exported:'Archivo exportado',
   badGames:n=>'Copia rechazada: '+n+' partida'+(n>1?'s son inservibles':' es inservible')+'. No se ha cambiado nada.',
   copied:'Resultado copiado', maxEight:'8 jugadores como máximo',
+  crashTitle:'Esta pantalla no se ha podido mostrar',
+  crashDesc:'Tus datos se conservan. Expórtalos primero y luego empieza una partida nueva si la pantalla no vuelve.',
+  crashReset:'Abandonar la partida en curso',
   mScores:'Ver la puntuación', mRules:'Reglas de la casa', mHof:'Salón de la fama',
   mRoster:'Listado de jugadores', mHelp:'Chuleta de reglas', mShare:'Compartir la puntuación',
   backToScores:'Volver a la puntuación', backToRound:n=>'Volver a la ronda '+n,
@@ -1270,7 +1309,7 @@ const $ = s=>document.querySelector(s);
 
 /* ===== Répertoire de joueurs et archive des parties =================== */
 function uid(pfx){ return (pfx||'') + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36); }
-function roster(){ return Store.get('sk_roster', []); }
+function roster(){ return asList(Store.get('sk_roster', [])).filter(validEntry); }
 function saveRoster(l){ Store.set('sk_roster', l); refreshRMap(); }
 function rosterName(id){ const p=roster().find(x=>x.id===id); return p?p.name:null; }
 /* Cache du répertoire : la couleur et le picto affichés viennent toujours de la
@@ -1315,10 +1354,10 @@ function allNames(){
 }
 
 function newDraft(){
-  let sel = Store.get('sk_lastsel', []);
+  let sel = asList(Store.get('sk_lastsel', []));
   const ids = roster().map(p=>p.id);
   sel = sel.filter(id=>ids.includes(id));
-  return {sel, cfg:Object.assign({}, DEFAULT_CFG, Store.get('sk_cfg', {}))};
+  return {sel, cfg:safeCfg(Object.assign({}, DEFAULT_CFG, safeCfg(Store.get('sk_cfg', {}))))};
 }
 function startGame(){
   Store.set('sk_lastsel', draft.sel); Store.set('sk_cfg', draft.cfg);
@@ -1333,7 +1372,15 @@ function startGame(){
   save(); goRoot('round');
 }
 function save(){ Store.set('sk_game', G); if(G && G.rounds.every(r=>r.locked)) archiveUpsert(G); }
-function load(){ const g = Store.get('sk_game', null); if(g && g.players && g.rounds) G = g; }
+/* Une partie illisible est ignorée plutôt que subie : l'application repart
+   sur l'écran de configuration au lieu de rester blanche à chaque
+   chargement, sans moyen d'en sortir depuis l'application. */
+function load(){
+  const g = Store.get('sk_game', null);
+  if(!validGame(g) || !Array.isArray(g.rounds) || !g.rounds.length) return;
+  g.cfg = safeCfg(g.cfg);
+  G = g;
+}
 
 /* ===== Utilitaires UI ================================================ */
 function h(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content; }
@@ -1357,7 +1404,36 @@ async function keepAwake(on){
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && G && view==='round') keepAwake(true); });
 
 /* ===== Rendu ========================================================= */
+/* Filet de dernière chance. Les données sont assainies à la lecture, mais un
+   écran qui casse pour une raison imprévue ne doit jamais laisser du blanc :
+   il reste toujours de quoi récupérer sa sauvegarde et repartir. */
 function render(){
+  try{ renderView(); }
+  catch(err){ renderFailure(err); }
+}
+function renderFailure(err){
+  try{ console.error('Skull King : écran en échec', err); }catch(e){}
+  try{
+    $('#hTitle').textContent = T.crashTitle;
+    $('#hSub').textContent = '';
+    $('#hBack').style.display = 'none';
+    $('#barBtns').innerHTML = '';
+    $('#barHint').textContent = '';
+    const app=$('#app');
+    app.innerHTML='';
+    app.appendChild(h(`<div class="card">
+      <div class="nm" style="margin-bottom:6px">${T.crashTitle}</div>
+      <div class="small muted" style="margin-bottom:12px">${T.crashDesc}</div>
+      <button class="btn ghost sm" id="crExp">${T.exportBtn}</button>
+      <div style="height:8px"></div>
+      <button class="btn danger" id="crNew">${T.crashReset}</button></div>`));
+    $('#crExp').onclick=()=>{ try{ doExport(); }catch(e){} };
+    $('#crNew').onclick=()=>{
+      Store.del('sk_game'); G=null; draft=null; backStack=[]; param=null; view='setup'; render();
+    };
+  }catch(e){}
+}
+function renderView(){
   const app=$('#app'), bar=$('#barBtns'), hint=$('#barHint');
   app.innerHTML=''; bar.innerHTML=''; hint.textContent=''; hint.className='hint';
   hint.onclick=null; hint.style.cursor=''; refreshRMap();
@@ -2384,15 +2460,6 @@ function manualGameSheet(existing){
 }
 
 /* ---------- Sauvegarde vers un fichier ---------- */
-/* Une partie exploitable : des joueurs identifies, des manches lisibles.
-   Sans ces garanties, l'ecran des scores et le hall of fame lèvent. */
-function validGame(g){
-  if(!g || typeof g!=='object' || Array.isArray(g)) return false;
-  if(!Array.isArray(g.players) || !g.players.length) return false;
-  if(!g.players.every(p=>p && typeof p==='object' && typeof p.id==='string' && p.id)) return false;
-  if(g.rounds!=null && !Array.isArray(g.rounds)) return false;
-  return true;
-}
 /* Inspecte une sauvegarde AVANT d'ecrire quoi que ce soit. Renvoie le contenu
    a poser, ou {bad:n} quand n parties sont inexploitables, ou null si le
    fichier n'a pas la forme d'une sauvegarde. */
