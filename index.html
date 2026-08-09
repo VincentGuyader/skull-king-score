@@ -1557,20 +1557,37 @@ function renderSetup(){
 function renderSetup2(){ $('#app').innerHTML=''; $('#barBtns').innerHTML=''; renderSetup(); }
 
 /* ---------- Règles maison ---------- */
+/* Règles encore en jeu. Une règle retirée continue de compter dans les
+   manches où elle a déjà été pointée, mais ne s'offre plus nulle part. */
+function liveRules(cfg){ return ((cfg&&cfg.custom)||[]).filter(c=>c && !c.retired); }
+/* Vrai si la règle a déjà rapporté ou coûté des points dans une manche
+   validée de la partie en cours. La supprimer changerait alors un score
+   déjà annoncé à la table. */
+function ruleScored(cfg, c){
+  if(!G || G.cfg!==cfg || !Array.isArray(G.rounds)) return false;
+  return G.rounds.some(r=>r && r.locked &&
+    G.players.some(p=>((r.bonus||{})[p.id]||{})['x'+c.id]));
+}
 function renderCustoms(cfg, box){
   if(!box) return;
   const list=cfg.custom||(cfg.custom=[]);
   box.innerHTML='';
-  if(!list.length){
+  if(!liveRules(cfg).length){
     box.appendChild(h(`<div class="small muted">${T.noHouse}</div>`));
     return;
   }
   list.forEach((c,i)=>{
+    if(c.retired) return;
     const row=h(`<div class="rule">
       <div class="lbl"><div>${esc(c.name)}</div><small>${sgn(c.pts)} pts${c.tricks?' · '+T.ruleTricksTag(c.tricks):''} · ${T.ruleMaxTag(c.max)} · ${c.cond==='bid'?T.ruleTagOn:T.ruleTagOff}</small></div>
       <button class="mini ed">✎</button><button class="mini rm">×</button></div>`);
     row.querySelector('.ed').onclick=()=>ruleSheet(cfg, i, ()=>renderCustoms(cfg, box));
-    row.querySelector('.rm').onclick=()=>{ list.splice(i,1); buzz(); save(); renderCustoms(cfg, box); };
+    row.querySelector('.rm').onclick=()=>{
+      /* Jamais pointée : on l'efface. Déjà pointée dans une manche validée :
+         on la retire du jeu sans toucher aux points déjà annoncés. */
+      if(ruleScored(cfg, c)) c.retired=true; else list.splice(i,1);
+      buzz(); if(G) save(); renderCustoms(cfg, box);
+    };
     box.appendChild(row);
   });
 }
@@ -1783,7 +1800,7 @@ function bonusSheet(p, ri, repaint){
   r.bonus[p.id] = r.bonus[p.id] || {};
   const b=r.bonus[p.id];
   const defs = BONUS_DEFS.filter(d=>!d.need || G.cfg[d.need]).filter(d=>!d.free);
-  const customs = G.cfg.custom||[];
+  const customs = liveRules(G.cfg);
   openSheet(`<h3>${T.bonusOf(esc(p.name))}</h3>
     ${G.cfg.pirates?'<h2 style="margin:10px 0 2px">'+T.piratesTitle+'</h2><div class="small muted" style="margin-bottom:4px">'+T.piratesIntro+'</div><div class="pgrid" id="bp"></div><div id="bw"></div>':''}
     <h2 style="margin:16px 0 2px">${T.cardBonus}</h2>
@@ -2082,7 +2099,7 @@ function renderHelp(){
       ${kv(T.b14,'+10')}${kv(T.bb14,'+20')}${kv(T.bmp,'+20')}${kv(T.bpsk,'+30')}${kv(T.bskm,'+40')}
       ${cfg.loot?kv(T.bloot,'+20'):''}
     </div>
-    ${(cfg.custom&&cfg.custom.length)?`<h2>${T.yourRules}</h2><div class="card tight">${cfg.custom.map(c=>`<div class="kv"><span>${esc(c.name)}<br><small class="muted">${c.cond==='bid'?T.ruleTagOn:T.ruleTagOff} · ${T.ruleMaxTag(c.max)}</small></span><span>${sgn(c.pts)}</span></div>`).join('')}</div>`:''}
+    ${liveRules(cfg).length?`<h2>${T.yourRules}</h2><div class="card tight">${liveRules(cfg).map(c=>`<div class="kv"><span>${esc(c.name)}<br><small class="muted">${c.cond==='bid'?T.ruleTagOn:T.ruleTagOff} · ${T.ruleMaxTag(c.max)}</small></span><span>${sgn(c.pts)}</span></div>`).join('')}</div>`:''}
     <div class="small muted" style="margin:10px 2px 0">${T.bonusFoot}</div>
   </div>`));
 }
