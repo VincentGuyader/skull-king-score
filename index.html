@@ -361,6 +361,16 @@ function standings(game){
      lire l'identifiant d'un premier joueur qui n'existe pas. */
   return {cum, per, tot, idx, played: game.players.length ? cum[game.players[0].id].length : 0};
 }
+/* Rangs d'un classement déjà trié : deux totaux égaux occupent le même rang,
+   et le rang suivant saute d'autant. Une égalité parfaite n'a pas de
+   vainqueur, l'ordre du tableau players n'a pas à en désigner un. */
+function ranks(tot){
+  return tot.map(t=>1 + tot.filter(x=>x.total > t.total).length);
+}
+/* Joueurs en tête : un seul le plus souvent, plusieurs à égalité. */
+function leaders(tot){
+  return tot.length ? tot.filter(t=>t.total === tot[0].total) : [];
+}
 /* ===== Archive : résultat d'une partie ============================== */
 /* Une partie archivée a la même forme qu'une partie en cours.
    Une partie saisie à la main porte manual:true et finals:{pid:score}. */
@@ -391,7 +401,8 @@ function computeStats(games){
       s.games++; s.sum+=t.total;
       s.best = s.best==null?t.total:Math.max(s.best,t.total);
       s.worst= s.worst==null?t.total:Math.min(s.worst,t.total);
-      if(i===0){
+      /* Une égalité en tête est une victoire pour chacun des ex aequo. */
+      if(t.total===r.tot[0].total){
         s.wins++; s.cur++; s.streak=Math.max(s.streak,s.cur);
         if(r.tot[1]) s.margin=Math.max(s.margin, t.total-r.tot[1].total);
       } else s.cur=0;
@@ -400,7 +411,7 @@ function computeStats(games){
         if(u.id===t.id) return;
         const k=t.id+'|'+u.id;
         H[k]=H[k]||{w:0,n:0};
-        H[k].n++; if(i<j) H[k].w++;
+        H[k].n++; if(t.total > u.total) H[k].w++;
       });
     });
     if(!r.manual && r.st){
@@ -636,6 +647,7 @@ fr:{
   tapRound:'Touchez un numéro de manche pour la corriger.',
   nextRound:n=>'Manche '+n+' →', shareResult:'Partager le résultat',
   winner:(n,p)=>'🏆 '+n+' l’emporte avec '+p+' points',
+  tieWinner:(l,p)=>'🏆 Égalité : '+l.join(' et ')+', '+p+' points chacun',
   chartLater:'La courbe apparaîtra après la première manche.',
   chartStart:'Départ', chartAfter:i=>'Après manche '+i,
   colPlayer:'Joueur', colTotal:'Total', colRound:i=>'M'+i,
@@ -824,6 +836,7 @@ en:{
   tapRound:'Tap a round number to correct it.',
   nextRound:n=>'Round '+n+' →', shareResult:'Share the result',
   winner:(n,p)=>'🏆 '+n+' wins with '+p+' points',
+  tieWinner:(l,p)=>'🏆 Tie: '+l.join(' and ')+', '+p+' points each',
   chartLater:'The chart appears after the first round.',
   chartStart:'Start', chartAfter:i=>'After round '+i,
   colPlayer:'Player', colTotal:'Total', colRound:i=>'R'+i,
@@ -1003,6 +1016,7 @@ de:{
   tapRound:'Tippe auf eine Durchgangsnummer, um sie zu korrigieren.',
   nextRound:n=>'Durchgang '+n+' →', shareResult:'Ergebnis teilen',
   winner:(n,p)=>'🏆 '+n+' gewinnt mit '+p+' Punkten',
+  tieWinner:(l,p)=>'🏆 Gleichstand: '+l.join(' und ')+', je '+p+' Punkte',
   chartLater:'Die Kurve erscheint nach dem ersten Durchgang.',
   chartStart:'Start', chartAfter:i=>'Nach Durchgang '+i,
   colPlayer:'Spieler', colTotal:'Gesamt', colRound:i=>'D'+i,
@@ -1182,6 +1196,7 @@ es:{
   tapRound:'Toca el número de una ronda para corregirla.',
   nextRound:n=>'Ronda '+n+' →', shareResult:'Compartir el resultado',
   winner:(n,p)=>'🏆 '+n+' gana con '+p+' puntos',
+  tieWinner:(l,p)=>'🏆 Empate: '+l.join(' y ')+', '+p+' puntos cada uno',
   chartLater:'La curva aparece tras la primera ronda.',
   chartStart:'Inicio', chartAfter:i=>'Tras la ronda '+i,
   colPlayer:'Jugador', colTotal:'Total', colRound:i=>'R'+i,
@@ -1954,10 +1969,11 @@ function renderScores(){
   $('#app').appendChild(wrap);
 
   const lead=$('#lead');
+  const rk=ranks(st.tot);
   st.tot.forEach((t,i)=>{
     const d=t.last, cls = d>0?'pos':(d<0?'neg':'zero');
-    lead.appendChild(h(`<div class="lead ${i===0&&st.played?'first':''}">
-      <div class="rank">${i+1}</div>
+    lead.appendChild(h(`<div class="lead ${rk[i]===1&&st.played?'first':''}">
+      <div class="rank">${rk[i]}</div>
       ${avatar(t.p,i)}
       <div class="grow"><div class="nm">${esc(t.p.name)}</div></div>
       ${st.played?`<div class="delta ${cls}">${sgn(d)}</div>`:''}
@@ -1984,8 +2000,10 @@ function renderScores(){
     $('#next').onclick=()=>{ G.cur=G.rounds.findIndex(r=>!r.locked); G.phase='bid'; save(); buzz(14); goRoot('round'); };
     addUndo();
   } else {
-    const w=st.tot[0];
-    $('#barHint').textContent=T.winner(w.p.name, w.total);
+    const top=leaders(st.tot);
+    $('#barHint').textContent = top.length>1
+      ? T.tieWinner(top.map(t=>t.p.name), top[0].total)
+      : T.winner(top[0].p.name, top[0].total);
     btns.appendChild(h(`<button class="btn" id="share">${T.shareResult}</button>`));
     $('#share').onclick=shareResult;
     btns.appendChild(h(`<div style="height:8px"></div><div class="row" style="gap:8px"><button class="btn ghost sm grow" id="hof2">${T.hofTitle}</button><button class="btn ghost sm grow" id="new">${T.newGame}</button></div>`));
@@ -2324,9 +2342,10 @@ function renderHof(){
   });
   const gl=$('#gl');
   games.slice().sort((a,b)=>(b.date||0)-(a.date||0)).forEach(g=>{
-    const res=gameResult(g), w=res.tot[0];
+    const res=gameResult(g), top=leaders(res.tot);
+    const titre = top.length ? top.map(t=>esc(t.name)).join(' = ')+' · '+top[0].total+' pts' : '-';
     const row=h(`<div class="pr" style="cursor:pointer">
-      <div class="grow"><div class="nm">${w?esc(w.name)+' · '+w.total+' pts':'-'}</div>
+      <div class="grow"><div class="nm">${titre}</div>
         <div class="sub2">${T.gameLine(fdate(g.date), g.players.length, g.manual?T.manualTag:(g.cfg&&g.cfg.scoring==='rascal'?T.rascalName:T.classic))}</div></div>
       <div class="badge">${T.detailBadge}</div></div>`);
     row.firstElementChild.onclick=()=>go('game', g.id);
@@ -2432,8 +2451,9 @@ function renderGameDetail(gid){
   </div>`);
   $('#app').appendChild(box);
   const lead=$('#lead');
-  res.tot.forEach((t,i)=>lead.appendChild(h(`<div class="lead ${i===0?'first':''}">
-    <div class="rank">${i+1}</div>${avatar(g.players.find(x=>x.id===t.id)||t,i)}<div class="grow"><div class="nm">${esc(t.name)}</div></div>
+  const rkD=ranks(res.tot);
+  res.tot.forEach((t,i)=>lead.appendChild(h(`<div class="lead ${rkD[i]===1?'first':''}">
+    <div class="rank">${rkD[i]}</div>${avatar(g.players.find(x=>x.id===t.id)||t,i)}<div class="grow"><div class="nm">${esc(t.name)}</div></div>
     <div class="tot">${t.total}</div></div>`)));
   if(!g.manual){
     const st=res.st;
@@ -2640,10 +2660,15 @@ if(G) view = G.rounds.every(r=>r.locked) ? 'scores' : 'round';
 else { draft=newDraft(); view='setup'; }
 render();
 /* ===== Actions globales ============================================== */
-function shareResult(){
-  const st=standings(G);
+/* Isolé du partage lui-même pour être vérifiable sans navigator.share. */
+function shareText(){
+  const st=standings(G), rk=ranks(st.tot);
   let txt='☠ Skull King, '+fdate(Date.now())+'\n';
-  st.tot.forEach((t,i)=>{ txt+=`${i+1}. ${t.p.name} : ${t.total} pts\n`; });
+  st.tot.forEach((t,i)=>{ txt+=`${rk[i]}. ${t.p.name} : ${t.total} pts\n`; });
+  return txt;
+}
+function shareResult(){
+  const txt=shareText();
   if(navigator.share) navigator.share({text:txt}).catch(()=>{});
   else { navigator.clipboard && navigator.clipboard.writeText(txt); toast(T.copied); }
 }
