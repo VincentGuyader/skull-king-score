@@ -20,8 +20,13 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:8123',
     trace: 'retain-on-failure',
-    /* Cible reelle du produit : un telephone tenu en main autour de la table. */
-    ...devices['Pixel 7'],
     locale: 'fr-FR'
-  }
+  },
+  /* Trois moteurs. WebKit est celui de Safari et de tous les navigateurs iOS,
+     ou l'application est justement censee s'installer. */
+  projects: [
+    { name: 'chromium', use: { ...devices['Pixel 7'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 412, height: 915 } } },
+    { name: 'webkit', use: { ...devices['iPhone 13'] } }
+  ]
 });
