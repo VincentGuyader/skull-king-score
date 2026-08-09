@@ -1679,7 +1679,7 @@ function renderSetup(){
   const swRow=(key,label,hint)=>{
     const r=h(`<div class="brow"><div class="lbl">${label}<small>${hint}</small></div><div class="sw ${draft.cfg[key]?'on':''}"></div></div>`);
     r.querySelector('.sw').onclick=e=>{draft.cfg[key]=!draft.cfg[key];e.target.classList.toggle('on');buzz();
-      $('#hSub').textContent = draft.sel.length+' joueurs · '+draft.cfg.rounds+' manches';};
+      $('#hSub').textContent = T.headSub(draft.sel.length, draft.cfg.rounds);};
     opts.appendChild(r);
   };
   swRow('loot',T.optLoot,T.optLootD);
@@ -1826,7 +1826,7 @@ function renderRound(){
     const frag=h(`<div class="pr">
       ${avatar(p,i)}
       <div class="grow"><div class="nm">${esc(p.name)}</div><div class="sub2"></div></div>
-      ${bidding?'':`<button class="star" title="Bonus">★</button>`}
+      ${bidding?'':`<button class="star" title="${esc(T.bonusTitle)}" aria-label="${esc(T.bonusTitle)}">★</button>`}
       <div class="step big"><button class="minus">−</button><div class="v"></div><button class="plus">+</button></div>
     </div>`);
     const card=frag.firstElementChild;
@@ -2175,7 +2175,7 @@ function niceStep(raw){
 function drawChart(node, st, game){
   const G=game;
   const n=st.played;
-  if(n<1){ node.innerHTML='<div class="small muted" style="padding:26px 10px;text-align:center">${T.chartLater}</div>'; return; }
+  if(n<1){ node.innerHTML=`<div class="small muted" style="padding:26px 10px;text-align:center">${esc(T.chartLater)}</div>`; return; }
   const W=Math.max(280, node.clientWidth||300), H=200, mL=38, mR=16, mT=10, mB=24;
   const ser=G.players.map(p=>({p, v:[0].concat(st.cum[p.id])}));
   let lo=0, hi=0;
@@ -2452,7 +2452,7 @@ function renderHof(){
   const box=h(`<div>
     <button class="btn ghost sm" id="flt" style="margin-bottom:12px">⚙ ${esc(filterLabel())}</button>
     <div id="rk"></div>
-    <h2>Parties</h2><div id="gl"></div>
+    <h2>${T.gamesSection}</h2><div id="gl"></div>
   </div>`);
   $('#app').appendChild(box);
   backupBanner($('#rk'));
@@ -2563,8 +2563,9 @@ function renderPlayer(id){
 function favPirate(s){
   const e=Object.entries(s.pir||{}).sort((a,b)=>b[1]-a[1])[0];
   if(!e) return T.none;
-  const pi=PIRATES.find(x=>x.k===e[0]);
-  return (pi?pi.nom:e[0])+' <span class="muted">×'+e[1]+'</span>';
+  /* Le nom vient du dictionnaire, pas du moteur : PIRATES.nom est fige en
+     francais et servait tel quel dans les quatre langues. */
+  return (T.pirNames[e[0]]||e[0])+' <span class="muted">×'+e[1]+'</span>';
 }
 
 /* ---------- Détail d'une partie archivée ---------- */

@@ -72,20 +72,25 @@ export async function boot(page, state = {}) {
   put('sk_install_hidden', state.installHidden ?? true);
   for (const [k, v] of Object.entries(state.raw || {})) raw[k] = v;
 
+  /* addInitScript rejoue a chaque navigation et s'accumule d'un appel a
+     l'autre. Le temoin __seme est pose APRES le chargement : au chargement
+     qui suit un boot() il est absent, donc tous les scripts s'executent dans
+     l'ordre d'ajout et le plus recent gagne ; a un rechargement il est la,
+     donc aucun ne s'execute et le test garde ce qu'il vient de faire. */
+  try {
+    await page.evaluate(() => { try { localStorage.removeItem('__seme'); } catch (e) {} });
+  } catch (e) { /* aucune page chargee pour l'instant */ }
+
   await page.addInitScript(entries => {
-    /* addInitScript rejoue a chaque navigation. Sans ce temoin, un
-       rechargement dans un test remettrait l'etat de depart et effacerait
-       ce que le test vient de faire. */
-    try {
-      if (localStorage.getItem('__seme')) return;
-      localStorage.setItem('__seme', '1');
-    } catch (e) { /* stockage indisponible : on seme a chaque fois */ }
+    try { if (localStorage.getItem('__seme')) return; } catch (e) { /* stockage indisponible */ }
     for (const [k, v] of entries) {
       try { localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ }
     }
   }, Object.entries(raw));
+
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.readyState === 'complete');
+  await page.evaluate(() => { try { localStorage.setItem('__seme', '1'); } catch (e) {} });
   return page;
 }
 
