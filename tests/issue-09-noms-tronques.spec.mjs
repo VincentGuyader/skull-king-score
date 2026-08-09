@@ -21,14 +21,19 @@ function partie(phase) {
   });
 }
 
-/** Mesure la place laissee au nom sur chaque ligne joueur. */
+/* Les metriques de police varient d'un systeme a l'autre : un test qui
+   compare des pixels a une valeur en dur passe sur une machine et casse sur
+   une autre. On verifie ce qui compte vraiment, que le nom soit entierement
+   lisible, sans supposer la largeur qu'il occupe. */
 function mesures(page) {
   return page.evaluate(() => [...document.querySelectorAll('#rows .pr')].map(row => {
     const nm = row.querySelector('.nm');
+    const ligne = parseFloat(getComputedStyle(nm).lineHeight) || 18;
     return {
       nom: nm.textContent,
       dispo: Math.round(nm.getBoundingClientRect().width),
       requis: nm.scrollWidth,
+      lignes: Math.max(1, Math.round(nm.scrollHeight / ligne)),
       hauteurLigne: Math.round(row.getBoundingClientRect().height)
     };
   }));
@@ -41,8 +46,10 @@ for (const largeur of [320, 360, 390, 412]) {
       await boot(page, { roster: HUIT, game: partie(phase) });
 
       for (const m of await mesures(page)) {
-        expect(m.requis, `${m.nom} : ${m.dispo} px disponibles pour ${m.requis} px`)
+        expect(m.requis, `${m.nom} deborde : ${m.dispo} px pour ${m.requis} px`)
           .toBeLessThanOrEqual(m.dispo + 1);
+        expect(m.lignes, `${m.nom} tient au plus sur deux lignes`).toBeLessThanOrEqual(2);
+        expect(m.hauteurLigne, `hauteur de la ligne de ${m.nom}`).toBeLessThanOrEqual(96);
       }
     });
   }
@@ -74,10 +81,20 @@ test('les compteurs restent utilisables sur petit ecran', async ({ page }) => {
   }
 });
 
+test('un nom court tient sur une seule ligne, meme a 320 px', async ({ page }) => {
+  const courts = ['Ana', 'Bo', 'Cid', 'Dan', 'Eve', 'Finn', 'Gil', 'Hugo']
+    .map((n, i) => player('j' + i, n, { color: COULEURS[i], icon: '☠️' }));
+  await page.setViewportSize({ width: 320, height: 900 });
+  await boot(page, { roster: courts, game: { ...partie('res'), players: courts } });
+  for (const m of await mesures(page)) {
+    expect(m.lignes, `${m.nom} sur une seule ligne`).toBe(1);
+  }
+});
+
 test('a 412 px et au dela, la ligne garde sa disposition confortable', async ({ page }) => {
   await page.setViewportSize({ width: 412, height: 900 });
   await boot(page, { roster: HUIT, game: partie('res') });
   const h = await page.evaluate(() =>
     Math.round(document.querySelector('#rows .pr').getBoundingClientRect().height));
-  expect(h, 'la ligne tient sur une hauteur raisonnable').toBeLessThanOrEqual(80);
+  expect(h, 'la ligne tient sur une hauteur raisonnable').toBeLessThanOrEqual(96);
 });

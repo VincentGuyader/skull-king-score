@@ -148,6 +148,14 @@ input[type=text]:focus{outline:2px solid var(--gold-dim);outline-offset:0}
    c'est la derniere chose qui doit ceder. Sous 412 px, l'avatar, l'etoile
    et le compteur se resserrent pour lui laisser la place, et le compteur
    reste au-dessus de la cible tactile confortable. */
+/* Sur la ligne joueur, le nom ne doit jamais etre coupe : c'est
+   l'information qui dit a qui on attribue les plis. Il passe a la ligne
+   plutot que de se faire tronquer, quelle que soit la police du systeme.
+   Le resserrement ci-dessous fait que ce repli sert rarement. */
+#rows .pr .nm{
+  white-space:normal;overflow:visible;text-overflow:clip;
+  overflow-wrap:anywhere;line-height:1.25;
+}
 @media(max-width:411px){
   .nm{font-size:14.5px}
   .pr{gap:7px;padding:7px}
