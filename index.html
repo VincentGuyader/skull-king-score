@@ -1366,8 +1366,22 @@ let view = 'setup';      // setup | round | scores | help
 let draft = null;        // écran de configuration
 let param = null;        // paramètre de l'écran courant (id de joueur, de partie...)
 let backStack = [];      // pile de navigation
-function go(v,pa){ backStack.push({v:view,p:param}); view=v; param=pa||null; render(); }
-function goBack(){ const s=backStack.pop(); view=s?s.v:'scores'; param=s?s.p:null; render(); }
+/* La pile en memoire fait foi, l'historique du navigateur sert de
+   declencheur. Sans entree d'historique, le bouton precedent et le geste de
+   retour d'Android quittaient l'application au lieu de reculer d'un ecran. */
+function go(v,pa){
+  backStack.push({v:view,p:param}); view=v; param=pa||null;
+  try{ history.pushState({sk:backStack.length}, ''); }catch(e){}
+  render();
+}
+function popBack(){ const s=backStack.pop(); view=s?s.v:'scores'; param=s?s.p:null; render(); }
+function goBack(){
+  if(!backStack.length) return;
+  /* Deleguer au navigateur quand une entree nous appartient : c'est lui qui
+     rappellera popBack, et les deux piles restent alignees. */
+  if(history.state && history.state.sk) history.back(); else popBack();
+}
+window.addEventListener('popstate', ()=>{ if(backStack.length) popBack(); });
 function goRoot(v,pa){ backStack=[]; view=v; param=pa||null; render(); }
 const $ = s=>document.querySelector(s);
 
