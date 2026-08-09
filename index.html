@@ -771,7 +771,9 @@ fr:{
   backupDesc:"Tout est stocké dans ce navigateur. Vider les données du navigateur ou changer de téléphone efface l'historique : exportez régulièrement.",
   exportBtn:'Exporter dans un fichier', importBtn:'Restaurer depuis un fichier',
   backupCount:(g,p)=>g+' parties · '+p+' joueurs',
-  mergeOrReplace:'OK pour FUSIONNER avec l’historique actuel.\nAnnuler pour REMPLACER tout l’historique.',
+  importTitle:'Restaurer une sauvegarde',
+  importDesc:(g,p)=>'Le fichier contient '+g+' partie'+(g>1?'s':'')+' et '+p+' joueur'+(p>1?'s':'')+'.',
+  importMerge:'Ajouter à l’historique actuel', importReplace:'Remplacer tout l’historique',
   restored:'Historique restauré', badFile:'Fichier illisible', exported:'Fichier exporté',
   badGames:n=>'Sauvegarde refusée : '+n+' partie'+(n>1?'s sont inexploitables':' est inexploitable')+'. Rien n’a été modifié.',
   copied:'Résultat copié', maxEight:'8 joueurs maximum',
@@ -954,7 +956,9 @@ en:{
   backupDesc:'Everything is stored in this browser. Clearing browser data or changing phone wipes the history: export regularly.',
   exportBtn:'Export to a file', importBtn:'Restore from a file',
   backupCount:(g,p)=>g+' games · '+p+' players',
-  mergeOrReplace:'OK to MERGE with the current history.\nCancel to REPLACE the whole history.',
+  importTitle:'Restore a backup',
+  importDesc:(g,p)=>'The file holds '+g+' game'+(g>1?'s':'')+' and '+p+' player'+(p>1?'s':'')+'.',
+  importMerge:'Add to the current history', importReplace:'Replace the whole history',
   restored:'History restored', badFile:'Unreadable file', exported:'File exported',
   badGames:n=>'Backup rejected: '+n+' game'+(n>1?'s are':' is')+' unusable. Nothing was changed.',
   copied:'Result copied', maxEight:'8 players maximum',
@@ -1136,7 +1140,9 @@ de:{
   backupDesc:'Alles liegt in diesem Browser. Browserdaten löschen oder das Telefon wechseln löscht die Chronik: exportiere regelmäßig.',
   exportBtn:'In eine Datei exportieren', importBtn:'Aus einer Datei wiederherstellen',
   backupCount:(g,p)=>g+' Partien · '+p+' Spieler',
-  mergeOrReplace:'OK, um mit der aktuellen Chronik ZUSAMMENZUFÜHREN.\nAbbrechen, um die gesamte Chronik zu ERSETZEN.',
+  importTitle:'Sicherung wiederherstellen',
+  importDesc:(g,p)=>'Die Datei enthält '+g+' Partie'+(g>1?'n':'')+' und '+p+' Spieler.',
+  importMerge:'Zur aktuellen Chronik hinzufügen', importReplace:'Gesamte Chronik ersetzen',
   restored:'Chronik wiederhergestellt', badFile:'Datei nicht lesbar', exported:'Datei exportiert',
   badGames:n=>'Sicherung abgelehnt: '+n+' Partie'+(n>1?'n sind':' ist')+' unbrauchbar. Nichts wurde geändert.',
   copied:'Ergebnis kopiert', maxEight:'höchstens 8 Spieler',
@@ -1318,7 +1324,9 @@ es:{
   backupDesc:'Todo se guarda en este navegador. Borrar los datos del navegador o cambiar de teléfono borra el historial: exporta con regularidad.',
   exportBtn:'Exportar a un archivo', importBtn:'Restaurar desde un archivo',
   backupCount:(g,p)=>g+' partidas · '+p+' jugadores',
-  mergeOrReplace:'Aceptar para FUSIONAR con el historial actual.\nCancelar para SUSTITUIR todo el historial.',
+  importTitle:'Restaurar una copia',
+  importDesc:(g,p)=>'El archivo contiene '+g+' partida'+(g>1?'s':'')+' y '+p+' jugador'+(p>1?'es':'')+'.',
+  importMerge:'Añadir al historial actual', importReplace:'Sustituir todo el historial',
   restored:'Historial restaurado', badFile:'Archivo ilegible', exported:'Archivo exportado',
   badGames:n=>'Copia rechazada: '+n+' partida'+(n>1?'s son inservibles':' es inservible')+'. No se ha cambiado nada.',
   copied:'Resultado copiado', maxEight:'8 jugadores como máximo',
@@ -2672,20 +2680,39 @@ function backupSheet(){
       const ok=readBackup(d);
       if(!ok){ toast(T.badFile); return; }
       if(ok.bad){ toast(T.badGames(ok.bad)); return; }
-      const mode=confirm(T.mergeOrReplace);
-      if(mode){
-        const a=archive(), ids=new Set(a.map(x=>x.id));
-        ok.archive.forEach(g=>{ if(!ids.has(g.id)) a.push(g); });
-        saveArchive(a);
-        const r=roster(), rid=new Set(r.map(x=>x.id));
-        ok.roster.forEach(p=>{ if(p && !rid.has(p.id)) r.push(p); });
-        saveRoster(r);
-      } else { saveArchive(ok.archive); saveRoster(ok.roster); }
-      closeSheet(); toast(T.restored); goRoot('hof');
+      importChoice(ok);
     };
     rd.readAsText(f);
   };
 }
+/* Fusionner ou remplacer, deux boutons nommés plutôt qu'un confirm() où
+   Annuler valait détruire. La touche d'échappement, le voile et le geste de
+   retour ferment la feuille sans rien changer, ce qui est le seul
+   comportement acceptable pour un geste d'abandon. */
+function importChoice(ok){
+  openSheet(`<h3>${T.importTitle}</h3>
+    <div class="small muted" style="margin-bottom:14px">${T.importDesc(ok.archive.length, ok.roster.length)}</div>
+    <button class="btn" id="imMerge">${T.importMerge}</button>
+    <div style="height:8px"></div>
+    <button class="btn danger" id="imReplace">${T.importReplace}</button>
+    <div style="height:8px"></div>
+    <button class="btn ghost sm" id="imCancel">${T.cancel}</button>`);
+  $('#imCancel').onclick=closeSheet;
+  $('#imMerge').onclick=()=>applyBackup(ok, true);
+  $('#imReplace').onclick=()=>applyBackup(ok, false);
+}
+function applyBackup(ok, merge){
+  if(merge){
+    const a=archive(), ids=new Set(a.map(x=>x.id));
+    ok.archive.forEach(g=>{ if(!ids.has(g.id)) a.push(g); });
+    saveArchive(a);
+    const r=roster(), rid=new Set(r.map(x=>x.id));
+    ok.roster.forEach(p=>{ if(p && !rid.has(p.id)) r.push(p); });
+    saveRoster(r);
+  } else { saveArchive(ok.archive); saveRoster(ok.roster); }
+  closeSheet(); buzz(20); toast(T.restored); goRoot('hof');
+}
+
 /* Demande au navigateur de ne pas évincer les données de l'app */
 async function askPersist(){
   try{
