@@ -25,30 +25,30 @@ const HOSTILES = {
 };
 const TRONQUE = '{"v":1,"roster":[{"id":"jA","name":"An';
 
-/* La boite de choix fusion ou remplacement est un confirm() : OK fusionne,
-   Annuler remplace. Un seul ecouteur par page, pilote par cette reference. */
-function repondreAuxBoites(page, modeRef) {
-  page.on('dialog', d => (modeRef.mode === 'fusion' ? d.accept() : d.dismiss()));
-}
+/* Le choix fusion ou remplacement se fait desormais par deux boutons nommes
+   dans une feuille de l'application. Un fichier refuse n'ouvre pas la
+   feuille du tout : le clic est alors sans objet. */
+function repondreAuxBoites() { /* plus de boite du navigateur a piloter */ }
 
-/** Ouvre la feuille de sauvegarde et depose un fichier. */
-async function importer(page, nom, contenu) {
+async function importer(page, nom, contenu, mode) {
   await page.evaluate(() => { go('hof'); backupSheet(); });
   await page.setInputFiles('#bfile', {
     name: nom, mimeType: 'application/json', buffer: Buffer.from(contenu, 'utf8')
   });
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(300);
+  const bouton = page.locator(mode === 'remplacement' ? '#imReplace' : '#imMerge');
+  if (await bouton.count()) await bouton.click();
+  await page.waitForTimeout(200);
 }
 
 for (const mode of ['fusion', 'remplacement']) {
   test(`un fichier hostile ne touche pas a l historique, mode ${mode}`, async ({ page }) => {
-    repondreAuxBoites(page, { mode });
     for (const [nom, objet] of Object.entries(HOSTILES)) {
       await boot(page, { roster: [ANNE, BOB], archive: [PARTIE] });
       const roster0 = await store(page, 'sk_roster');
       const archive0 = await store(page, 'sk_archive');
 
-      await importer(page, nom, JSON.stringify(objet));
+      await importer(page, nom, JSON.stringify(objet), mode);
 
       expect(await store(page, 'sk_roster'), `${nom} : repertoire`).toEqual(roster0);
       expect(await store(page, 'sk_archive'), `${nom} : archive`).toEqual(archive0);
@@ -57,20 +57,18 @@ for (const mode of ['fusion', 'remplacement']) {
 }
 
 test('un fichier tronque ne touche pas a l historique', async ({ page }) => {
-  repondreAuxBoites(page, { mode: 'remplacement' });
   await boot(page, { roster: [ANNE, BOB], archive: [PARTIE] });
   const archive0 = await store(page, 'sk_archive');
-  await importer(page, 'tronque.json', TRONQUE);
+  await importer(page, 'tronque.json', TRONQUE, 'remplacement');
   expect(await store(page, 'sk_archive')).toEqual(archive0);
   expect(await store(page, 'sk_roster')).toEqual([ANNE, BOB]);
 });
 
 test('le refus laisse l application utilisable et previent l utilisateur', async ({ page }) => {
   const errs = watchErrors(page);
-  repondreAuxBoites(page, { mode: 'remplacement' });
   await boot(page, { roster: [ANNE, BOB], archive: [PARTIE] });
   await importer(page, 'archive-sans-players.json',
-    JSON.stringify(HOSTILES['archive-sans-players.json']));
+    JSON.stringify(HOSTILES['archive-sans-players.json']), 'remplacement');
 
   await expect(page.locator('#toast'), 'un message est affiche').toHaveClass(/on/);
   await page.evaluate(() => goRoot('hof'));
@@ -87,18 +85,14 @@ test('une sauvegarde valide se restaure encore, dans les deux modes', async ({ p
     rounds: [round({ jA: 0, jC: 1 }, { jA: 0, jC: 1 })]
   });
   const sauvegarde = JSON.stringify({ v: 1, roster: [ANNE, CLEO], archive: [AUTRE] });
-  const modeRef = { mode: 'fusion' };
-  repondreAuxBoites(page, modeRef);
-
   await boot(page, { roster: [ANNE, BOB], archive: [PARTIE] });
-  await importer(page, 'sauvegarde.json', sauvegarde);
+  await importer(page, 'sauvegarde.json', sauvegarde, 'fusion');
   expect((await store(page, 'sk_archive')).map(g => g.id), 'fusion').toEqual(['g1', 'g2']);
   expect((await store(page, 'sk_roster')).map(p => p.id), 'fusion, repertoire')
     .toEqual(['jA', 'jB', 'jC']);
 
-  modeRef.mode = 'remplacement';
   await boot(page, { roster: [ANNE, BOB], archive: [PARTIE] });
-  await importer(page, 'sauvegarde.json', sauvegarde);
+  await importer(page, 'sauvegarde.json', sauvegarde, 'remplacement');
   expect((await store(page, 'sk_archive')).map(g => g.id), 'remplacement').toEqual(['g2']);
   expect((await store(page, 'sk_roster')).map(p => p.id), 'remplacement, repertoire')
     .toEqual(['jA', 'jC']);
