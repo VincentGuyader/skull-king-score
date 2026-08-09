@@ -1851,7 +1851,13 @@ function renderBar(ri){
     hint.textContent=T.totalBid(sum, cap)+(d>0?T.over(d):d<0?T.under(-d):T.exactBid);
     btns.appendChild(h(`<button class="btn" id="ok">${T.bidsDone}</button>`));
     $('#ok').onclick=()=>{ if(!freshTap()) return;
-      G.phase='res'; r.bid0=Object.assign({}, r.bids); save(); buzz(14); renderRound2(); };
+      G.phase='res';
+      /* L'annonce de reference se fixe une fois pour la manche. La recopier a
+         chaque passage aux resultats transformait la modification de Harry en
+         nouvelle reference : la trace disparaissait et la borne du pouvoir
+         derivait d'un pli a chaque aller retour. */
+      if(!r.bid0) r.bid0=Object.assign({}, r.bids);
+      save(); buzz(14); renderRound2(); };
     if(ri>0 && G.rounds[ri-1].locked){
       btns.appendChild(h(`<div style="height:8px"></div><button class="btn ghost sm" id="backSc">${T.backToScores}</button>`));
       $('#backSc').onclick=()=>{ save(); goRoot('scores'); };
