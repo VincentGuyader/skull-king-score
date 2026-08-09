@@ -429,6 +429,7 @@ function computeStats(games){
   sorted.forEach(g=>{
     const r=gameResult(g);
     if(!r.tot.length) return;
+    const rangs=ranks(r.tot);
     r.tot.forEach((t,i)=>{
       const s=get(t.id);
       s.games++; s.sum+=t.total;
@@ -439,7 +440,9 @@ function computeStats(games){
         s.wins++; s.cur++; s.streak=Math.max(s.streak,s.cur);
         if(r.tot[1]) s.margin=Math.max(s.margin, t.total-r.tot[1].total);
       } else s.cur=0;
-      if(i<3) s.podiums++;
+      /* À deux et à trois, tout le monde est sur le podium : la statistique
+         ne dit alors rien de plus que le nombre de parties. */
+      if(r.tot.length>=4 && rangs[i]<=3) s.podiums++;
       r.tot.forEach((u,j)=>{
         if(u.id===t.id) return;
         const k=t.id+'|'+u.id;
@@ -484,7 +487,11 @@ function filterGames(games, f){
       if(f.size==='6+' && n<6) return false;
     }
     if(f.months && f.months!=='all' && f.now){
-      if((f.now - (g.date||0)) > f.months*30.44*864e5) return false;
+      const age = f.now - (g.date||0);
+      /* Une date dans le futur donne une anciennete negative, qui passait
+         toutes les bornes. Un jour de marge absorbe les fuseaux et une
+         saisie du soir. */
+      if(age > f.months*30.44*864e5 || age < -864e5) return false;
     }
     return true;
   });
@@ -2632,9 +2639,13 @@ function manualGameSheet(existing){
   if(existing) (existing.players||[]).forEach(p=>{ vals[p.id]=(existing.finals||{})[p.id]; });
   const d=existing? new Date(existing.date) : new Date();
   const iso=d.toISOString().slice(0,10);
+  /* Une partie ancienne s'est jouee avant aujourd'hui : borner le champ evite
+     la faute de frappe sur l'annee, qui polluait ensuite tous les filtres. */
+  const ajd=new Date().toISOString().slice(0,10);
+  const maxIso = iso > ajd ? iso : ajd;
   openSheet(`<h3>${existing?T.manualEdit:T.manualTitle}</h3>
     <div class="small muted" style="margin-bottom:10px">${T.manualDesc}</div>
-    <input type="date" id="md" value="${iso}" style="width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);border-radius:11px;padding:12px;font-size:16px;font-family:inherit;min-height:46px">
+    <input type="date" id="md" value="${iso}" max="${maxIso}" style="width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);border-radius:11px;padding:12px;font-size:16px;font-family:inherit;min-height:46px">
     <div id="mp" style="margin-top:8px"></div>
     <div style="height:14px"></div>
     <button class="btn" id="mok">${T.saveBtn}</button>
