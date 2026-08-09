@@ -1434,6 +1434,25 @@ async function keepAwake(on){
 }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && G && view==='round') keepAwake(true); });
 
+/* Anti-rebond de navigation. Le bouton principal d'un écran occupe la place
+   que le précédent vient de libérer : sans ce garde, un double appui sur
+   « Valider la manche » enchaîne sur « Manche suivante » et personne ne voit
+   les scores. Deux actions d'écran séparées de moins d'un tiers de seconde
+   ne peuvent pas être délibérées ; la seconde est ignorée. */
+let navAt = 0;
+function freshTap(){
+  const now = Date.now();
+  if(now - navAt <= 320) return false;
+  navAt = now;
+  return true;
+}
+/* Toute interaction ailleurs que dans la barre du bas leve le garde : le
+   joueur a repris la main, l'appui suivant est delibere. Seuls deux appuis
+   consecutifs sur la barre, sans rien entre les deux, sont suspects. */
+document.addEventListener('click', e=>{
+  if(!e.target || !e.target.closest || !e.target.closest('#barBtns')) navAt = 0;
+}, true);
+
 /* ===== Rendu ========================================================= */
 /* Filet de dernière chance. Les données sont assainies à la lecture, mais un
    écran qui casse pour une raison imprévue ne doit jamais laisser du blanc :
@@ -1796,7 +1815,8 @@ function renderBar(ri){
     const d=sum-cap;
     hint.textContent=T.totalBid(sum, cap)+(d>0?T.over(d):d<0?T.under(-d):T.exactBid);
     btns.appendChild(h(`<button class="btn" id="ok">${T.bidsDone}</button>`));
-    $('#ok').onclick=()=>{ G.phase='res'; r.bid0=Object.assign({}, r.bids); save(); buzz(14); renderRound2(); };
+    $('#ok').onclick=()=>{ if(!freshTap()) return;
+      G.phase='res'; r.bid0=Object.assign({}, r.bids); save(); buzz(14); renderRound2(); };
     if(ri>0 && G.rounds[ri-1].locked){
       btns.appendChild(h(`<div style="height:8px"></div><button class="btn ghost sm" id="backSc">${T.backToScores}</button>`));
       $('#backSc').onclick=()=>{ save(); goRoot('scores'); };
@@ -1812,8 +1832,8 @@ function renderBar(ri){
     hint.onclick=()=>capacitySheet(ri);
     btns.appendChild(h(`<button class="btn" id="ok" ${sum>cap?'disabled':''}>${T.validateRound}</button>`));
     btns.appendChild(h(`<div style="height:8px"></div><button class="btn ghost sm" id="back">${T.backToBids}</button>`));
-    $('#back').onclick=()=>{G.phase='bid';save();renderRound2()};
-    if(sum<=cap) $('#ok').onclick=()=>lockRound(ri);
+    $('#back').onclick=()=>{ if(!freshTap()) return; G.phase='bid'; save(); renderRound2(); };
+    if(sum<=cap) $('#ok').onclick=()=>{ if(freshTap()) lockRound(ri); };
   }
 }
 function renderRound2(){ $('#app').innerHTML=''; $('#barBtns').innerHTML=''; $('#barHint').textContent=''; $('#barHint').className='hint'; renderRound(); }
@@ -1991,13 +2011,15 @@ function renderScores(){
     if(lastLocked<0) return;
     btns.appendChild(h(`<div style="height:8px"></div><button class="btn ghost sm" id="undoR">${T.backToRound(lastLocked+1)}</button>`));
     $('#undoR').onclick=()=>{
+      if(!freshTap()) return;
       G.rounds[lastLocked].locked=false; G.cur=lastLocked; G.phase='res';
       save(); buzz(); goRoot('round');
     };
   };
   if(!done){
     btns.appendChild(h(`<button class="btn" id="next">${T.nextRound(G.cur+2)}</button>`));
-    $('#next').onclick=()=>{ G.cur=G.rounds.findIndex(r=>!r.locked); G.phase='bid'; save(); buzz(14); goRoot('round'); };
+    $('#next').onclick=()=>{ if(!freshTap()) return;
+      G.cur=G.rounds.findIndex(r=>!r.locked); G.phase='bid'; save(); buzz(14); goRoot('round'); };
     addUndo();
   } else {
     const top=leaders(st.tot);

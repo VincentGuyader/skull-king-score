@@ -131,6 +131,16 @@ export async function setCounter(page, index, target) {
   throw new Error('trop d iterations sur le compteur');
 }
 
+/**
+ * Clique un bouton de la barre du bas en laissant passer l'anti-rebond de
+ * navigation : deux actions d'ecran separees de moins d'un tiers de seconde
+ * sont traitees comme un double appui accidentel et la seconde est ignoree.
+ */
+export async function tapBar(page, selecteur) {
+  await page.waitForTimeout(350);
+  await page.locator(selecteur).click();
+}
+
 /** Contenu d'une cle de stockage, deserialise. */
 export function store(page, key) {
   return page.evaluate(k => {
