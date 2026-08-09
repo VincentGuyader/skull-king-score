@@ -1,0 +1,13 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# harnais de recette
+node_modules/
+playwright-report/
+test-results/
+_site/
+
+# debris windows
+bash.exe.stackdump
