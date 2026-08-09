@@ -697,6 +697,7 @@ fr:{
   /* menu */
   mScores:'Voir les scores', mRules:'Règles maison', mHof:'Hall of fame',
   mRoster:'Répertoire des joueurs', mHelp:'Aide-mémoire des règles', mShare:'Partager le score',
+  backToScores:'Revenir aux scores', backToRound:n=>'Revenir à la manche '+n,
   backupDue:n=>n+' partie'+(n>1?'s':'')+' depuis votre dernière sauvegarde. Exportez votre historique, il ne vit que dans ce navigateur.', exportNow:'Exporter maintenant', later:'Plus tard', installTitle:'Installer l’application', installIOS:'Bouton Partager, puis « Sur l’écran d’accueil ». Sur iPhone c’est indispensable : Safari efface les données d’un site après 7 jours sans visite, pas celles d’une app installée.', installAndroid:'Menu du navigateur, puis « Installer l’application ». L’app fonctionne alors hors-ligne et garde durablement votre historique.', dismiss:'Masquer',
   mNew:'Nouvelle partie', mLang:'Langue'
 },
@@ -867,6 +868,7 @@ en:{
   copied:'Result copied', maxEight:'8 players maximum',
   mScores:'View the scores', mRules:'House rules', mHof:'Hall of fame',
   mRoster:'Player roster', mHelp:'Rules quick reference', mShare:'Share the score',
+  backToScores:'Back to the scores', backToRound:n=>'Back to round '+n,
   backupDue:n=>n+' game'+(n>1?'s':'')+' since your last backup. Export your history, it only lives in this browser.', exportNow:'Export now', later:'Later', installTitle:'Install the app', installIOS:'Share button, then “Add to Home Screen”. On iPhone this matters: Safari wipes a site’s data after 7 days without a visit, but not an installed app’s.', installAndroid:'Browser menu, then “Install app”. The app then works offline and keeps your history for good.', dismiss:'Hide',
   mNew:'New game', mLang:'Language'
 },
@@ -1037,6 +1039,7 @@ de:{
   copied:'Ergebnis kopiert', maxEight:'höchstens 8 Spieler',
   mScores:'Punkte ansehen', mRules:'Hausregeln', mHof:'Ruhmeshalle',
   mRoster:'Spielerliste', mHelp:'Regel-Spickzettel', mShare:'Punkte teilen',
+  backToScores:'Zurück zur Wertung', backToRound:n=>'Zurück zu Durchgang '+n,
   backupDue:n=>n+' Partie'+(n>1?'n':'')+' seit deiner letzten Sicherung. Exportiere deine Chronik, sie liegt nur in diesem Browser.', exportNow:'Jetzt exportieren', later:'Später', installTitle:'App installieren', installIOS:'Teilen-Symbol, dann „Zum Home-Bildschirm“. Auf dem iPhone ist das wichtig: Safari löscht die Daten einer Website nach 7 Tagen ohne Besuch, die einer installierten App nicht.', installAndroid:'Browser-Menü, dann „App installieren“. Danach läuft die App offline und behält deine Chronik dauerhaft.', dismiss:'Ausblenden',
   mNew:'Neue Partie', mLang:'Sprache'
 },
@@ -1207,6 +1210,7 @@ es:{
   copied:'Resultado copiado', maxEight:'8 jugadores como máximo',
   mScores:'Ver la puntuación', mRules:'Reglas de la casa', mHof:'Salón de la fama',
   mRoster:'Listado de jugadores', mHelp:'Chuleta de reglas', mShare:'Compartir la puntuación',
+  backToScores:'Volver a la puntuación', backToRound:n=>'Volver a la ronda '+n,
   backupDue:n=>n+' partida'+(n>1?'s':'')+' desde tu última copia. Exporta tu historial, solo vive en este navegador.', exportNow:'Exportar ahora', later:'Más tarde', installTitle:'Instalar la aplicación', installIOS:'Botón Compartir y luego «Añadir a pantalla de inicio». En iPhone es importante: Safari borra los datos de un sitio tras 7 días sin visita, los de una app instalada no.', installAndroid:'Menú del navegador y luego «Instalar aplicación». Así funciona sin conexión y conserva tu historial.', dismiss:'Ocultar',
   mNew:'Nueva partida', mLang:'Idioma'
 }
@@ -1661,6 +1665,10 @@ function renderBar(ri){
     hint.textContent=T.totalBid(sum, cap)+(d>0?T.over(d):d<0?T.under(-d):T.exactBid);
     btns.appendChild(h(`<button class="btn" id="ok">${T.bidsDone}</button>`));
     $('#ok').onclick=()=>{ G.phase='res'; r.bid0=Object.assign({}, r.bids); save(); buzz(14); renderRound2(); };
+    if(ri>0 && G.rounds[ri-1].locked){
+      btns.appendChild(h(`<div style="height:8px"></div><button class="btn ghost sm" id="backSc">${T.backToScores}</button>`));
+      $('#backSc').onclick=()=>{ save(); goRoot('scores'); };
+    }
   } else {
     const sum=G.players.reduce((s,p)=>s+(r.tricks[p.id]||0),0);
     const short=cap-sum;
@@ -1840,9 +1848,19 @@ function renderScores(){
   buildTable($('#tbl'), st, G, true);
 
   const btns=$('#barBtns');
+  const lastLocked = (()=>{ for(let i=G.rounds.length-1;i>=0;i--) if(G.rounds[i].locked) return i; return -1; })();
+  const addUndo = ()=>{
+    if(lastLocked<0) return;
+    btns.appendChild(h(`<div style="height:8px"></div><button class="btn ghost sm" id="undoR">${T.backToRound(lastLocked+1)}</button>`));
+    $('#undoR').onclick=()=>{
+      G.rounds[lastLocked].locked=false; G.cur=lastLocked; G.phase='res';
+      save(); buzz(); goRoot('round');
+    };
+  };
   if(!done){
     btns.appendChild(h(`<button class="btn" id="next">${T.nextRound(G.cur+2)}</button>`));
     $('#next').onclick=()=>{ G.cur=G.rounds.findIndex(r=>!r.locked); G.phase='bid'; save(); buzz(14); goRoot('round'); };
+    addUndo();
   } else {
     const w=st.tot[0];
     $('#barHint').textContent=T.winner(w.p.name, w.total);
@@ -1851,6 +1869,7 @@ function renderScores(){
     btns.appendChild(h(`<div style="height:8px"></div><div class="row" style="gap:8px"><button class="btn ghost sm grow" id="hof2">${T.hofTitle}</button><button class="btn ghost sm grow" id="new">${T.newGame}</button></div>`));
     $('#hof2').onclick=()=>go('hof');
     $('#new').onclick=()=>{ if(confirm(T.confirmNew)){ Store.del('sk_game'); G=null; draft=newDraft(); goRoot('setup'); } };
+    addUndo();
   }
 }
 
