@@ -73,6 +73,13 @@ export async function boot(page, state = {}) {
   for (const [k, v] of Object.entries(state.raw || {})) raw[k] = v;
 
   await page.addInitScript(entries => {
+    /* addInitScript rejoue a chaque navigation. Sans ce temoin, un
+       rechargement dans un test remettrait l'etat de depart et effacerait
+       ce que le test vient de faire. */
+    try {
+      if (localStorage.getItem('__seme')) return;
+      localStorage.setItem('__seme', '1');
+    } catch (e) { /* stockage indisponible : on seme a chaque fois */ }
     for (const [k, v] of entries) {
       try { localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ }
     }
