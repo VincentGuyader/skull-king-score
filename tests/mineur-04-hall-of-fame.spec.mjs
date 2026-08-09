@@ -58,7 +58,7 @@ test('la saisie d une partie ancienne n accepte pas une date future', async ({ p
   expect(max, 'la date est bornee a aujourd hui').toBe(new Date().toISOString().slice(0, 10));
 });
 
-test('le podium ne compte pas quand tout le monde y est', async ({ page }) => {
+test('le podium existe des deux joueurs', async ({ page }) => {
   await boot(page, {
     roster: J,
     archive: [
@@ -69,11 +69,12 @@ test('le podium ne compte pas quand tout le monde y est', async ({ page }) => {
   const S = await page.evaluate(() => computeStats(archive()).S);
   expect(S.j0.games, 'deux parties jouees').toBe(2);
   expect(S.j0.wins, 'deux victoires').toBe(2);
-  expect(S.j0.podiums, 'aucun podium a deux ni a trois joueurs').toBe(0);
-  expect(S.j2.podiums, 'le dernier d une partie a trois non plus').toBe(0);
+  expect(S.j0.podiums, 'premier des deux fois').toBe(2);
+  expect(S.j1.podiums, 'deuxieme des deux fois, sur le podium aussi').toBe(2);
+  expect(S.j2.podiums, 'troisieme d une partie a trois, sur le podium').toBe(1);
 });
 
-test('a partir de quatre joueurs, le podium reprend son sens', async ({ page }) => {
+test('le rang, pas la place dans la liste, decide du podium', async ({ page }) => {
   await boot(page, {
     roster: J,
     archive: [partie('a4', Date.now() - JOUR, [J[0], J[1], J[2], J[3]])]
