@@ -652,6 +652,7 @@ fr:{
   mergeDesc:n=>'Choisissez la fiche qui absorbe celle-ci. Toutes les parties de '+n+' lui seront attribuées, puis cette fiche sera supprimée.',
   mergeAbsorb:'absorber', mergeConfirm:(a,b)=>a+' sera fusionné dans '+b+'. Continuer ?',
   mergeNeedTwo:'Il faut au moins deux fiches',
+  mergeSameGame:(a,b,n)=>'Impossible : '+a+' et '+b+' ont joué '+n+' partie'+(n>1?'s':'')+' ensemble. Les fusionner reviendrait à effacer une des deux lignes. Corrigez ou supprimez cette partie d’abord.',
   /* hall of fame */
   hofTitle:'Hall of fame', hofSub:n=>n+' partie'+(n>1?'s':'')+' archivée'+(n>1?'s':''),
   allGames:'Toutes les parties', gamesSection:'Parties',
@@ -829,6 +830,7 @@ en:{
   mergeDesc:n=>'Choose the profile that absorbs this one. All games of '+n+' will be reassigned to it, then this profile is deleted.',
   mergeAbsorb:'absorb', mergeConfirm:(a,b)=>a+' will be merged into '+b+'. Continue?',
   mergeNeedTwo:'At least two profiles are needed',
+  mergeSameGame:(a,b,n)=>'Not possible: '+a+' and '+b+' played '+n+' game'+(n>1?'s':'')+' together. Merging them would erase one of the two lines. Fix or delete that game first.',
   hofTitle:'Hall of fame', hofSub:n=>n+' game'+(n>1?'s':'')+' archived',
   allGames:'All games', gamesSection:'Games',
   hofEmpty:'No game matches. Finish a game, or enter an older one from the button below.',
@@ -1000,6 +1002,7 @@ de:{
   mergeDesc:n=>'Wähle das Profil, das dieses aufnimmt. Alle Partien von '+n+' werden ihm zugeordnet, danach wird dieses Profil gelöscht.',
   mergeAbsorb:'aufnehmen', mergeConfirm:(a,b)=>a+' wird in '+b+' zusammengeführt. Fortfahren?',
   mergeNeedTwo:'Es braucht mindestens zwei Profile',
+  mergeSameGame:(a,b,n)=>'Nicht möglich: '+a+' und '+b+' haben '+n+' Partie'+(n>1?'n':'')+' zusammen gespielt. Beim Zusammenführen ginge eine der beiden Zeilen verloren. Korrigiere oder lösche diese Partie zuerst.',
   hofTitle:'Ruhmeshalle', hofSub:n=>n+' Partie'+(n>1?'n':'')+' archiviert',
   allGames:'Alle Partien', gamesSection:'Partien',
   hofEmpty:'Keine Partie passt. Spiele eine Partie zu Ende oder trage unten eine ältere ein.',
@@ -1171,6 +1174,7 @@ es:{
   mergeDesc:n=>'Elige la ficha que absorbe esta. Todas las partidas de '+n+' pasarán a ella y luego esta ficha se borrará.',
   mergeAbsorb:'absorber', mergeConfirm:(a,b)=>a+' se fusionará en '+b+'. ¿Continuar?',
   mergeNeedTwo:'Hacen falta al menos dos fichas',
+  mergeSameGame:(a,b,n)=>'Imposible: '+a+' y '+b+' jugaron '+n+' partida'+(n>1?'s':'')+' juntas. Fusionarlas borraría una de las dos líneas. Corrige o elimina esa partida antes.',
   hofTitle:'Salón de la fama', hofSub:n=>n+' partida'+(n>1?'s':'')+' archivada'+(n>1?'s':''),
   allGames:'Todas las partidas', gamesSection:'Partidas',
   hofEmpty:'Ninguna partida coincide. Termina una partida o introduce una antigua desde el botón de abajo.',
@@ -2109,6 +2113,38 @@ function renderRoster(){
   $('#barBtns').appendChild(h(`<button class="btn" id="ap">${T.newPlayer}</button>`));
   $('#ap').onclick=()=>newPlayerSheet(()=>render());
 }
+/* Parties ou les deux fiches figurent toutes les deux : leurs deux lignes ne
+   peuvent pas se reduire a une seule sans inventer un score, la fusion est
+   donc refusee tant qu'il en reste une. */
+function mergeConflicts(id, oid){
+  return archive().filter(g=>{
+    const l = g && Array.isArray(g.players) ? g.players : [];
+    return l.some(x=>x&&x.id===id) && l.some(x=>x&&x.id===oid);
+  });
+}
+/* Deplace toute trace de `id` vers `oid` dans une partie : la ligne joueur,
+   mais aussi les annonces, les plis, les bonus, l'annonce initiale de Harry
+   et le score final d'une partie saisie a la main. */
+function reindexGame(g, id, oid, oname){
+  if(!g || !Array.isArray(g.players) || !g.players.some(x=>x&&x.id===id)) return false;
+  g.players.forEach(pp=>{ if(pp&&pp.id===id){ pp.id=oid; pp.name=oname; } });
+  const move=o=>{ if(o && Object.prototype.hasOwnProperty.call(o,id)){ o[oid]=o[id]; delete o[id]; } };
+  (Array.isArray(g.rounds)?g.rounds:[]).forEach(r=>{
+    if(!r) return;
+    move(r.bids); move(r.tricks); move(r.bonus); move(r.bid0);
+  });
+  move(g.finals);
+  return true;
+}
+function mergePlayers(id, oid, oname){
+  const a=archive();
+  a.forEach(g=>reindexGame(g, id, oid, oname));
+  saveArchive(a);
+  if(reindexGame(G, id, oid, oname)) save();
+  Store.set('sk_lastsel', Store.get('sk_lastsel', []).map(x=>x===id?oid:x));
+  if(draft) draft.sel = draft.sel.map(x=>x===id?oid:x);
+  saveRoster(roster().filter(x=>x.id!==id));
+}
 function mergeSheet(id){
   const p=roster().find(x=>x.id===id);
   const others=roster().filter(x=>x.id!==id);
@@ -2121,15 +2157,10 @@ function mergeSheet(id){
   others.forEach(o=>{
     const row=h(`<div class="pr" style="cursor:pointer">${avatar(o,0)}<div class="grow"><div class="nm">${esc(o.name)}</div></div><div class="badge">${T.mergeAbsorb}</div></div>`);
     row.firstElementChild.onclick=()=>{
+      const clash=mergeConflicts(id, o.id);
+      if(clash.length){ toast(T.mergeSameGame(p.name, o.name, clash.length)); return; }
       if(!confirm(T.mergeConfirm(p.name, o.name))) return;
-      const a=archive();
-      a.forEach(g=>{
-        g.players.forEach(pp=>{ if(pp.id===id){ pp.id=o.id; pp.name=o.name; } });
-        // si les deux fiches étaient dans la même partie, on garde la première occurrence
-        const seen=new Set(); g.players=g.players.filter(pp=>seen.has(pp.id)?false:(seen.add(pp.id),true));
-      });
-      saveArchive(a);
-      saveRoster(roster().filter(x=>x.id!==id));
+      mergePlayers(id, o.id, o.name);
       closeSheet(); buzz(20); render();
     };
     ml.appendChild(row);
