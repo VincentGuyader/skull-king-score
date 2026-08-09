@@ -2766,7 +2766,19 @@ $('#hMenu').onclick=()=>{
   }
   b('mNew').onclick=()=>{ if(confirm(T.confirmAbandon)){ closeSheet(); Store.del('sk_game'); G=null; draft=newDraft(); goRoot('setup'); } };
 };
-window.addEventListener('resize',()=>{ if(view==='scores') render(); });
+/* Seule la courbe depend de la largeur de la fenetre. Un rendu complet
+   ramenait en haut de page a chaque redimensionnement, et sur mobile le
+   repli de la barre d'URL en declenche un a chaque defilement : l'ecran le
+   plus long de l'application redebobinait sous les doigts du joueur. */
+let resizeT;
+window.addEventListener('resize',()=>{
+  if(view!=='scores' || !G) return;
+  clearTimeout(resizeT);
+  resizeT=setTimeout(()=>{
+    const node=$('#chart');
+    if(node) try{ drawChart(node, standings(G), G); }catch(e){}
+  }, 120);
+});
 
 setLang(detectLang());
 askPersist();
