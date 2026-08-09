@@ -784,6 +784,7 @@ fr:{
   restored:'Historique restauré', badFile:'Fichier illisible', exported:'Fichier exporté',
   badGames:n=>'Sauvegarde refusée : '+n+' partie'+(n>1?'s sont inexploitables':' est inexploitable')+'. Rien n’a été modifié.',
   copied:'Résultat copié', maxEight:'8 joueurs maximum',
+  wagerNote:v=>'Pari du Rascal : +'+v+' si l’annonce est juste, −'+v+' sinon. Compté à part.',
   otherTab:'Une autre fenêtre a démarré une partie. Vos saisies ne sont plus enregistrées ici, pour ne pas écraser la sienne.',
   otherTabReload:'Reprendre la partie enregistrée',
   crashTitle:'Cet écran n’a pas pu s’afficher',
@@ -969,6 +970,7 @@ en:{
   restored:'History restored', badFile:'Unreadable file', exported:'File exported',
   badGames:n=>'Backup rejected: '+n+' game'+(n>1?'s are':' is')+' unusable. Nothing was changed.',
   copied:'Result copied', maxEight:'8 players maximum',
+  wagerNote:v=>'Rascal wager: +'+v+' on a correct bid, −'+v+' otherwise. Counted separately.',
   otherTab:'Another window started a game. Your entries are no longer saved here, so they cannot overwrite it.',
   otherTabReload:'Load the saved game',
   crashTitle:'This screen could not be displayed',
@@ -1153,6 +1155,7 @@ de:{
   restored:'Chronik wiederhergestellt', badFile:'Datei nicht lesbar', exported:'Datei exportiert',
   badGames:n=>'Sicherung abgelehnt: '+n+' Partie'+(n>1?'n sind':' ist')+' unbrauchbar. Nichts wurde geändert.',
   copied:'Ergebnis kopiert', maxEight:'höchstens 8 Spieler',
+  wagerNote:v=>'Rascal-Wette: +'+v+' bei richtiger Ansage, −'+v+' sonst. Zählt separat.',
   otherTab:'Ein anderes Fenster hat eine Partie gestartet. Deine Eingaben werden hier nicht mehr gespeichert, damit sie jene nicht überschreiben.',
   otherTabReload:'Gespeicherte Partie laden',
   crashTitle:'Dieser Bildschirm konnte nicht angezeigt werden',
@@ -1337,6 +1340,7 @@ es:{
   restored:'Historial restaurado', badFile:'Archivo ilegible', exported:'Archivo exportado',
   badGames:n=>'Copia rechazada: '+n+' partida'+(n>1?'s son inservibles':' es inservible')+'. No se ha cambiado nada.',
   copied:'Resultado copiado', maxEight:'8 jugadores como máximo',
+  wagerNote:v=>'Apuesta del Rascal: +'+v+' si la apuesta es exacta, −'+v+' si no. Se cuenta aparte.',
   otherTab:'Otra ventana ha empezado una partida. Tus entradas ya no se guardan aquí, para no sobrescribirla.',
   otherTabReload:'Cargar la partida guardada',
   crashTitle:'Esta pantalla no se ha podido mostrar',
@@ -1990,9 +1994,14 @@ function bonusSheet(p, ri, repaint){
     <div id="bf"></div>
     <div style="height:14px"></div>
     <div class="row"><div class="grow small muted">${T.totalBonus}</div><div class="tot" id="btot">0</div></div>
+    <div class="small muted" id="bwn" style="margin-top:6px"></div>
     <div style="height:12px"></div>
     <button class="btn" id="bok">${T.done}</button>`);
-  const upTot=()=>{ $('#btot').textContent=sgn(bonusPoints(b, G.cfg)); };
+  const upTot=()=>{
+    $('#btot').textContent=sgn(bonusPoints(b, G.cfg));
+    const n=$('#bwn');
+    if(n) n.textContent = b.wager ? T.wagerNote(b.wager) : '';
+  };
   const addRow=(node,label,hint,key,max)=>{
     const row=h(`<div class="brow"><div class="lbl">${label}<small>${hint}</small></div><div class="step"></div></div>`);
     stepper(row.querySelector('.step'), b[key]||0, 0, max, v=>{b[key]=v;save();upTot()});
@@ -2042,7 +2051,7 @@ function freeEditor(node, b, onChange){
       <button class="qbtn" data-p="10">+10</button>
     </div>
     <div class="row" style="gap:7px;margin-top:8px">
-      <input type="text" id="fin" class="grow" inputmode="numeric" placeholder="${T.exactValue}" value="">
+      <input type="text" id="fin" class="grow" inputmode="numeric" placeholder="${T.exactValue}" value="${b.free?b.free:''}">
       <button class="mini" id="fz" title="${T.resetZero}" style="width:46px;height:46px;flex:0 0 46px">⟲</button>
     </div>
     <input type="text" id="fnote" placeholder="${T.noteHint}" maxlength="40" style="margin-top:7px" value="${esc(b.note||'')}">
