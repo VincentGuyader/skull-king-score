@@ -112,12 +112,26 @@ export function head(page) {
   }));
 }
 
-/** Tableau manche par manche de l'ecran des scores, sous forme de lignes. */
+/**
+ * Tableau manche par manche : en-tete des manches et lignes de joueurs.
+ * La ligne des cartes distribuees est volontairement exclue, elle a son
+ * propre accesseur pour que les assertions de score restent lisibles.
+ */
 export function table(page) {
   return page.evaluate(() => {
     const t = document.querySelector('#tbl table');
     if (!t) return null;
-    return [...t.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent));
+    return [...t.querySelectorAll('tr')]
+      .filter(tr => !tr.classList.contains('cards'))
+      .map(tr => [...tr.children].map(td => td.textContent));
+  });
+}
+
+/** Ligne des cartes distribuees, libelle compris. */
+export function cardsRow(page) {
+  return page.evaluate(() => {
+    const tr = document.querySelector('#tbl table tr.cards');
+    return tr ? [...tr.children].map(td => td.textContent) : null;
   });
 }
 

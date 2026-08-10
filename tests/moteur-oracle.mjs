@@ -11,8 +11,18 @@ export function paquetOracle(cfg) {
   return PAQUET.base + (cfg.loot ? PAQUET.loot : 0)
     + (cfg.kraken ? PAQUET.kraken : 0) + (cfg.whale ? PAQUET.whale : 0);
 }
+/* Sans sequence, la progression officielle. Avec une sequence, la valeur
+   qu'elle indique pour cette manche, la derniere servant au-dela. Le paquet
+   plafonne dans les deux cas. */
 export function cartesOracle(cfg, joueurs, manche) {
-  return Math.min(manche + 1, Math.floor(paquetOracle(cfg) / Math.max(2, joueurs)));
+  const plafond = Math.floor(paquetOracle(cfg) / Math.max(2, joueurs));
+  const seq = cfg && Array.isArray(cfg.seq) && cfg.seq.length ? cfg.seq : null;
+  let voulu = manche + 1;
+  if (seq) {
+    const v = seq[manche] != null ? seq[manche] : seq[seq.length - 1];
+    if (Number.isInteger(v) && v >= 1) voulu = v;
+  }
+  return Math.max(1, Math.min(voulu, plafond));
 }
 
 /* Deux poches : ce qui depend de la reussite de l'annonce, et ce qui est
