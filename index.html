@@ -636,13 +636,25 @@ function asList(v){ return Array.isArray(v) ? v : []; }
 /* Une fiche exploitable : un identifiant stable, c'est tout ce dont
    l'affichage a besoin pour retrouver couleur, picto et nom. */
 function validEntry(p){ return !!p && typeof p==='object' && typeof p.id==='string' && !!p.id; }
+/* Un objet simple, ni null, ni tableau. */
+function plainObject(v){ return !!v && typeof v==='object' && !Array.isArray(v); }
+/* Une manche lisible : les trois registres indexés par joueur sont présents et
+   consultables. scoreRoundAll écrit r.bids[p.id] sans détour ; une manche qui
+   ne les porte pas fait lever tout l'écran des scores. */
+function validRound(r){
+  return plainObject(r) && plainObject(r.bids) && plainObject(r.tricks) && plainObject(r.bonus);
+}
 /* Une partie exploitable : des joueurs identifiés, des manches lisibles.
-   Sans ces garanties, l'écran des scores et le hall of fame lèvent. */
+   Vérifier la forme de la liste ne suffit pas : une seule manche abîmée dans
+   une partie par ailleurs saine suffisait à tuer le hall of fame. */
 function validGame(g){
-  if(!g || typeof g!=='object' || Array.isArray(g)) return false;
+  if(!plainObject(g)) return false;
   if(!Array.isArray(g.players) || !g.players.length) return false;
   if(!g.players.every(validEntry)) return false;
-  if(g.rounds!=null && !Array.isArray(g.rounds)) return false;
+  if(g.rounds!=null){
+    if(!Array.isArray(g.rounds)) return false;
+    if(!g.rounds.every(validRound)) return false;
+  }
   return true;
 }
 /* Configuration toujours utilisable : les règles maison sont parcourues à
