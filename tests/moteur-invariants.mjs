@@ -18,6 +18,11 @@ import {
    f.size && f.size!=='all' contre || : entrer dans le bloc avec une valeur
    vide ou 'all' ne declenche aucune des trois comparaisons qui suivent.
 
+   cfg && Array.isArray(cfg.seq) && cfg.seq.length contre || : quand la garde
+   interieure rejette deja toute valeur qui n'est pas un nombre de cartes
+   plausible, entrer avec une sequence illisible retombe sur la progression
+   officielle par le meme chemin.
+
    Toutes les autres mutations du coeur du calcul sont attrapees. */
 
 /* Les regles qui doivent tenir quoi qu'il arrive, decrites une seule fois.
@@ -66,11 +71,14 @@ const feuilleBonus = regles => fc.record({
   return sortie;
 });
 
+/* Une partie sur deux suit une sequence de distribution : sans cela, la
+   variante « Attaque eclair » et ses cousines ne seraient jamais parcourues. */
 const partieDetaillee = fc.tuple(
   fc.integer({ min: 2, max: 8 }),
   fc.uniqueArray(regleMaison, { minLength: 0, maxLength: 2, selector: c => c.id }),
-  bareme
-).chain(([n, regles, cfg]) => {
+  bareme,
+  fc.option(fc.array(fc.integer({ min: 1, max: 12 }), { minLength: 1, maxLength: 10 }), { nil: null })
+).chain(([n, regles, cfg, seq]) => {
   const joueurs = Array.from({ length: n }, (_, i) => ({ id: 'j' + i, name: 'J' + i }));
   return fc.record({
     date: fc.integer({ min: 1600000000000, max: 1800000000000 }),
@@ -82,7 +90,8 @@ const partieDetaillee = fc.tuple(
       locked: fc.boolean()
     }), { minLength: 1, maxLength: 8 })
   }).map(({ date, manches }) => ({
-    id: 'g', date, cfg: { ...cfg, custom: regles, rounds: manches.length },
+    id: 'g', date,
+    cfg: { ...cfg, custom: regles, rounds: manches.length, ...(seq ? { seq } : {}) },
     players: joueurs, manual: false,
     rounds: manches.map(m => ({
       bids: Object.fromEntries(joueurs.map((p, i) => [p.id, m.bids[i]])),
@@ -348,6 +357,42 @@ export function invariants(M, opts = {}) {
           eq(M.deckSize(cfg), paquetOracle(cfg), 'taille du paquet');
           eq(M.cardsForRound(cfg, n, ri), cartesOracle(cfg, n, ri), 'cartes distribuees');
         }), R);
+    }],
+
+    ['la sequence de distribution concorde avec le temoin', () => {
+      fc.assert(fc.property(
+        fc.array(fc.integer({ min: 1, max: 14 }), { minLength: 1, maxLength: 12 }),
+        fc.integer({ min: 2, max: 8 }), fc.integer({ min: 0, max: 14 }),
+        (seq, n, ri) => {
+          const cfg = { loot: true, kraken: true, whale: true, seq };
+          eq(M.cardsForRound(cfg, n, ri), cartesOracle(cfg, n, ri), 'cartes selon la sequence');
+          vrai(M.cardsForRound(cfg, n, ri) >= 1, 'jamais zero carte');
+          vrai(M.cardsForRound(cfg, n, ri) <= M.maxCards(cfg, n), 'jamais plus que le paquet');
+        }), R);
+      /* Une sequence d'un autre type, venue d'une sauvegarde abimee ou d'une
+         version future, doit ramener a la progression officielle et non a des
+         manches sans cartes. */
+      for (const seq of ['oui', 7, {}, true, [], [null, 2], ['a'],
+                         [0, 3], [-2, 4], [2.5, 6], [Infinity], [NaN, 3]]) {
+        const cfg = { loot: true, kraken: true, whale: true, seq };
+        for (const ri of [0, 1, 4, 9]) {
+          const c = M.cardsForRound(cfg, 4, ri);
+          vrai(Number.isInteger(c) && c >= 1, 'sequence ' + JSON.stringify(seq) + ' donne ' + c);
+          eq(c, cartesOracle(cfg, 4, ri), 'sequence ' + JSON.stringify(seq) + ', manche ' + (ri + 1));
+        }
+      }
+      /* Les six suggestions du livret 2022, page 27. */
+      const livret = {
+        noodd: [2, 2, 4, 4, 6, 6, 8, 8, 10, 10], ready: [6, 7, 8, 9, 10],
+        flash: [5, 5, 5, 5, 5], barrage: Array(10).fill(10),
+        whirl: [9, 9, 7, 7, 5, 5, 3, 3, 1, 1], bedtime: [1]
+      };
+      for (const [nom, seq] of Object.entries(livret)) {
+        const cfg = { loot: true, kraken: true, whale: true, seq };
+        seq.forEach((attendu, i) => {
+          eq(M.cardsForRound(cfg, 4, i), Math.min(attendu, M.maxCards(cfg, 4)), nom + ', manche ' + (i + 1));
+        });
+      }
     }],
 
     ['la capacite de la manche concorde avec le temoin', () => {

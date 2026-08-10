@@ -146,6 +146,24 @@ input[type=text]:focus{outline:2px solid var(--gold-dim);outline-offset:0}
 
 /* Mentions : repliees par defaut, atteignables au clavier comme au doigt.
    On les trouve quand on les cherche, elles n'encombrent personne sinon. */
+table tr.cards th{font-weight:600;color:var(--muted);border-bottom:1px solid var(--line-2);
+  font-size:11.5px;letter-spacing:0;text-transform:none;padding-top:0}
+.deal{display:flex;flex-direction:column;gap:6px}
+.deal button{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:11px;
+  padding:10px 12px;color:var(--ink);font-family:inherit;font-size:14.5px;
+  cursor:pointer;min-height:48px;
+}
+.deal button.on{border-color:rgba(224,181,103,.45);background:rgba(224,181,103,.08)}
+.deal button .dn{font-weight:650}
+.deal button .dq{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.seqgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin-top:10px}
+.seqcell{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:6px 4px;text-align:center}
+.seqcell .sl{font-size:11px;color:var(--muted);display:block;margin-bottom:2px}
+.seqcell .step{justify-content:center}
+.seqcell .step button{width:30px;height:30px;font-size:16px;border-radius:8px}
+.seqcell .step .v{min-width:22px;font-size:15px}
 .about{margin:18px 2px 0;border-top:1px solid var(--line);padding-top:12px}
 .about summary{
   font-size:12.5px;color:var(--muted);cursor:pointer;list-style:none;
@@ -324,8 +342,21 @@ function deckSize(cfg){
   return DECK.base + (cfg.loot?DECK.loot:0) + (cfg.kraken?DECK.kraken:0) + (cfg.whale?DECK.whale:0);
 }
 function maxCards(cfg, nPlayers){ return Math.floor(deckSize(cfg)/Math.max(2,nPlayers)); }
-function cardsForRound(cfg, nPlayers, roundIdx){ // roundIdx 0-based
-  return Math.min(roundIdx+1, maxCards(cfg,nPlayers));
+/* Cartes distribuees a la manche roundIdx (base 0).
+   Sans sequence, la progression officielle : une carte de plus a chaque
+   manche. Avec une sequence, la valeur qu'elle indique. Dans les deux cas le
+   paquet a le dernier mot, comme le livret le prevoit a 7 et 8 joueurs. */
+function cardsForRound(cfg, nPlayers, roundIdx){
+  const seq = cfg && Array.isArray(cfg.seq) && cfg.seq.length ? cfg.seq : null;
+  let voulu = roundIdx+1;
+  if(seq){
+    const v = seq[roundIdx] != null ? seq[roundIdx] : seq[seq.length-1];
+    /* Une entree qui n'est pas un nombre de cartes plausible est ignoree :
+       les parties archivees ne repassent pas par safeCfg, et une valeur
+       etrangere donnerait NaN sur toute la feuille de score. */
+    if(Number.isInteger(v) && v >= 1) voulu = v;
+  }
+  return Math.max(1, Math.min(voulu, maxCards(cfg,nPlayers)));
 }
 /* Sépare les bonus en deux poches :
    cond = soumis à la réussite de l'annonce (bonus officiels, règles maison "soumises")
@@ -619,6 +650,13 @@ function validGame(g){
 function safeCfg(cfg){
   const c = (cfg && typeof cfg==='object' && !Array.isArray(cfg)) ? cfg : {};
   if(!Array.isArray(c.custom)) c.custom = [];
+  /* Une sequence de distribution abimee revient a la progression officielle
+     plutot qu'a des manches sans cartes. */
+  if(c.seq != null){
+    const ok = Array.isArray(c.seq) && c.seq.length
+      && c.seq.every(v => Number.isInteger(v) && v >= 1 && v <= 15);
+    if(!ok){ delete c.seq; delete c.deal; }
+  }
   return c;
 }
 
@@ -649,6 +687,16 @@ fr:{
   houseRules:'Règles maison', addHouse:'+ Ajouter une carte ou une pénalité maison',
   noHouse:"Aucune pour l'instant. Déclarez vos cartes ou pénalités maison : elles deviennent des compteurs dans la feuille de bonus de chaque joueur, à chaque manche.",
   roundsTitle:'Manches', roundsCount:'Nombre de manches',
+  dealTitle:'Cartes par manche',
+  dealNames:{up:'Croissant', noodd:'Pas d’impair', ready:'Prêt au combat', flash:'Attaque éclair',
+             barrage:'Tir de barrage', whirl:'Tourbillon', bedtime:'L’heure du dodo', custom:'Sur mesure'},
+  dealUpHint:'1, 2, 3… une carte de plus à chaque manche',
+  dealCustomHint:'Composez votre propre suite de manches',
+  roundsOf:n=>n+' manche'+(n>1?'s':''),
+  roundsFixed:n=>'Fixé par la variante « '+n+' »',
+  seqLess:'− une manche', seqMore:'+ une manche',
+  seqHint:m=>'Le paquet limite à '+m+' carte'+(m>1?'s':'')+' par joueur avec cette table.',
+  colCards:'cartes',
   roundsHint:(mc,n)=>'Standard : 10 · max '+mc+' cartes à '+n+' joueurs',
   startGame:'Commencer la partie', needTwo:'Choisissez au moins 2 joueurs',
   resume:'Reprendre la partie en cours',
@@ -857,6 +905,16 @@ en:{
   houseRules:'House rules', addHouse:'+ Add a house card or penalty',
   noHouse:'None yet. Declare your own cards or penalties: they become counters in every player’s bonus sheet, every round.',
   roundsTitle:'Rounds', roundsCount:'Number of rounds',
+  dealTitle:'Cards per round',
+  dealNames:{up:'Increasing', noodd:'No odds', ready:'Ready for battle', flash:'Lightning raid',
+             barrage:'Barrage', whirl:'Whirlpool', bedtime:'Bedtime', custom:'Custom'},
+  dealUpHint:'1, 2, 3… one more card each round',
+  dealCustomHint:'Build your own run of rounds',
+  roundsOf:n=>n+' round'+(n>1?'s':''),
+  roundsFixed:n=>'Set by the “'+n+'” variant',
+  seqLess:'− one round', seqMore:'+ one round',
+  seqHint:m=>'The deck caps this table at '+m+' card'+(m>1?'s':'')+' per player.',
+  colCards:'cards',
   roundsHint:(mc,n)=>'Standard: 10 · max '+mc+' cards with '+n+' players',
   startGame:'Start the game', needTwo:'Pick at least 2 players',
   resume:'Resume the game in progress',
@@ -1049,6 +1107,16 @@ de:{
   houseRules:'Hausregeln', addHouse:'+ Eigene Karte oder Strafe hinzufügen',
   noHouse:'Noch keine. Lege eigene Karten oder Strafen an: sie erscheinen als Zähler im Bonusblatt jedes Spielers, in jedem Durchgang.',
   roundsTitle:'Durchgänge', roundsCount:'Anzahl der Durchgänge',
+  dealTitle:'Karten pro Durchgang',
+  dealNames:{up:'Ansteigend', noodd:'Keine Ungeraden', ready:'Bereit zum Kampf', flash:'Blitzangriff',
+             barrage:'Sperrfeuer', whirl:'Strudel', bedtime:'Schlafenszeit', custom:'Nach Maß'},
+  dealUpHint:'1, 2, 3… jede Runde eine Karte mehr',
+  dealCustomHint:'Stelle deine eigene Folge zusammen',
+  roundsOf:n=>n+(n>1?' Durchgänge':' Durchgang'),
+  roundsFixed:n=>'Durch die Variante „'+n+'“ festgelegt',
+  seqLess:'− ein Durchgang', seqMore:'+ ein Durchgang',
+  seqHint:m=>'Das Kartendeck erlaubt hier höchstens '+m+' Karte'+(m>1?'n':'')+' pro Person.',
+  colCards:'Karten',
   roundsHint:(mc,n)=>'Standard: 10 · max. '+mc+' Karten bei '+n+' Spielern',
   startGame:'Partie starten', needTwo:'Mindestens 2 Spieler wählen',
   resume:'Laufende Partie fortsetzen',
@@ -1241,6 +1309,16 @@ es:{
   houseRules:'Reglas de la casa', addHouse:'+ Añadir una carta o penalización propia',
   noHouse:'Ninguna todavía. Declara tus cartas o penalizaciones: se convierten en contadores en la hoja de bonificaciones de cada jugador, en cada ronda.',
   roundsTitle:'Rondas', roundsCount:'Número de rondas',
+  dealTitle:'Cartas por ronda',
+  dealNames:{up:'Creciente', noodd:'Sin impares', ready:'Listos para el combate', flash:'Ataque relámpago',
+             barrage:'Fuego de barrera', whirl:'Remolino', bedtime:'Hora de dormir', custom:'A medida'},
+  dealUpHint:'1, 2, 3… una carta más en cada ronda',
+  dealCustomHint:'Compón tu propia serie de rondas',
+  roundsOf:n=>n+' ronda'+(n>1?'s':''),
+  roundsFixed:n=>'Fijado por la variante «'+n+'»',
+  seqLess:'− una ronda', seqMore:'+ una ronda',
+  seqHint:m=>'La baraja limita esta mesa a '+m+' carta'+(m>1?'s':'')+' por jugador.',
+  colCards:'cartas',
   roundsHint:(mc,n)=>'Estándar: 10 · máx. '+mc+' cartas con '+n+' jugadores',
   startGame:'Empezar la partida', needTwo:'Elige al menos 2 jugadores',
   resume:'Retomar la partida en curso',
@@ -1448,6 +1526,27 @@ function langSheet(){
 /* ===== État ========================================================== */
 const SERIES = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
 const DEFAULT_CFG = {scoring:'classic', rascal:'grapeshot', bonusIfExact:true, loot:true, kraken:true, whale:true, pirates:true, rounds:10, custom:[]};
+/* Distribution des cartes. Les six suggestions viennent du livret 2022,
+   section « Nombre de cartes ». Chacune fixe aussi le nombre de manches :
+   c'est la longueur de sa sequence. */
+const rep = (n, v) => Array.from({length:n}, ()=>v);
+const paire = l => l.flatMap(v=>[v,v]);
+const DEALS = [
+  {k:'up',      seq:null},
+  {k:'noodd',   seq:paire([2,4,6,8,10])},
+  {k:'ready',   seq:[6,7,8,9,10]},
+  {k:'flash',   seq:rep(5,5)},
+  {k:'barrage', seq:rep(10,10)},
+  {k:'whirl',   seq:paire([9,7,5,3,1])},
+  {k:'bedtime', seq:[1]},
+  {k:'custom',  seq:null}
+];
+const dealOf = cfg => (cfg && cfg.deal) || 'up';
+/* Sequence reellement appliquee, ou null pour la progression officielle. */
+function dealSeq(cfg){ return Array.isArray(cfg && cfg.seq) && cfg.seq.length ? cfg.seq : null; }
+/* Nombre de manches d'une configuration : impose par la variante quand il y
+   en a une, libre sinon. */
+function dealRounds(cfg){ const q = dealSeq(cfg); return q ? q.length : cfg.rounds; }
 let G = null;            // partie en cours
 let view = 'setup';      // setup | round | scores | help
 let draft = null;        // écran de configuration
@@ -1539,7 +1638,7 @@ function startGame(){
     players: draft.sel.map((id,i)=>{ const r=roster().find(x=>x.id===id)||{};
       return {id, name:r.name||('Joueur '+(i+1)), color:r.color||SERIES_HEX[i%8], icon:r.icon||'☠️'}; }),
     cfg: Object.assign({}, draft.cfg),
-    rounds: Array.from({length:draft.cfg.rounds},()=>({bids:{},tricks:{},bonus:{},locked:false})),
+    rounds: Array.from({length:dealRounds(draft.cfg)},()=>({bids:{},tricks:{},bonus:{},locked:false})),
     cur:0, phase:'bid', started:Date.now()
   };
   save(); goRoot('round');
@@ -1718,9 +1817,11 @@ function renderSetup(){
       <h2>${T.houseRules}</h2>
       <div class="card tight" id="customs"></div>
       <button class="btn ghost sm" id="addC">${T.addHouse}</button>
+      <h2>${T.dealTitle}</h2>
+      <div class="card tight"><div class="deal" id="deal"></div><div id="seqBox"></div></div>
       <h2>${T.roundsTitle}</h2>
       <div class="card tight">
-        <div class="brow"><div class="lbl">${T.roundsCount}<small>${T.roundsHint(mc, Math.max(2,draft.sel.length))}</small></div>
+        <div class="brow"><div class="lbl">${T.roundsCount}<small id="roundsHint">${T.roundsHint(mc, Math.max(2,draft.sel.length))}</small></div>
           <div class="step" id="stRounds"></div></div>
       </div>
       <div style="height:4px"></div>
@@ -1785,8 +1886,18 @@ function renderSetup(){
   renderCustoms(draft.cfg, $('#customs'));
   $('#addC').onclick=()=>ruleSheet(draft.cfg, null, ()=>renderCustoms(draft.cfg, $('#customs')));
 
-  // manches
-  stepper($('#stRounds'), draft.cfg.rounds, 5, 15, v=>{draft.cfg.rounds=v; $('#hSub').textContent=T.headSub(draft.sel.length, v);});
+  // distribution des cartes
+  renderDeal();
+
+  // manches : libre en progression officielle, impose par la variante sinon
+  if(dealSeq(draft.cfg)){
+    const n = dealSeq(draft.cfg).length;
+    $('#stRounds').innerHTML='';
+    $('#stRounds').appendChild(h(`<div class="v" style="min-width:34px;opacity:.6">${n}</div>`));
+    $('#roundsHint').textContent = T.roundsFixed(T.dealNames[dealOf(draft.cfg)]);
+  } else {
+    stepper($('#stRounds'), draft.cfg.rounds, 5, 15, v=>{draft.cfg.rounds=v; $('#hSub').textContent=T.headSub(draft.sel.length, v);});
+  }
 
   const btns=$('#barBtns');
   const okN = draft.sel.length>=2;
@@ -1798,6 +1909,56 @@ function renderSetup(){
   }
 }
 function renderSetup2(){ $('#app').innerHTML=''; $('#barBtns').innerHTML=''; renderSetup(); }
+
+/* Choix de la distribution, puis editeur de sequence quand elle est libre. */
+function renderDeal(){
+  const box=$('#deal'); if(!box) return;
+  box.innerHTML='';
+  const actif = dealOf(draft.cfg);
+  DEALS.forEach(d=>{
+    const seq = d.k==='custom' ? (actif==='custom' ? dealSeq(draft.cfg) : null) : d.seq;
+    const resume = d.k==='up' ? T.dealUpHint
+                 : d.k==='custom' ? T.dealCustomHint
+                 : seq.join(', ')+' · '+T.roundsOf(seq.length);
+    const b=h(`<button class="${actif===d.k?'on':''}">
+      <span><span class="dn">${esc(T.dealNames[d.k])}</span><span class="dq">${esc(resume)}</span></span></button>`).firstElementChild;
+    b.onclick=()=>{
+      draft.cfg.deal = d.k;
+      if(d.k==='up'){ delete draft.cfg.seq; }
+      else if(d.k==='custom'){ draft.cfg.seq = (dealSeq(draft.cfg)||[]).slice(); if(!draft.cfg.seq.length) draft.cfg.seq = Array.from({length:draft.cfg.rounds||10},(_,i)=>i+1); }
+      else { draft.cfg.seq = d.seq.slice(); }
+      buzz(); renderSetup2();
+    };
+    box.appendChild(b);
+  });
+  renderSeqEditor();
+}
+
+/* Une manche par cellule. La longueur de la sequence est le nombre de
+   manches : ajouter une cellule, c'est ajouter une manche. */
+function renderSeqEditor(){
+  const box=$('#seqBox'); if(!box) return;
+  box.innerHTML='';
+  if(dealOf(draft.cfg)!=='custom') return;
+  const seq = draft.cfg.seq;
+  const plafond = maxCards(draft.cfg, Math.max(2,draft.sel.length));
+  const grille=h('<div class="seqgrid"></div>').firstElementChild;
+  seq.forEach((v,i)=>{
+    const cell=h(`<div class="seqcell"><span class="sl">${esc(T.colRound(i+1))}</span><div class="step"></div></div>`).firstElementChild;
+    stepper(cell.querySelector('.step'), Math.min(v,plafond), 1, plafond, nv=>{ seq[i]=nv; }, T.colRound(i+1));
+    grille.appendChild(cell);
+  });
+  box.appendChild(grille);
+  const barre=h(`<div class="row" style="gap:8px;margin-top:10px">
+    <button class="btn ghost sm grow" id="seqLess">${T.seqLess}</button>
+    <button class="btn ghost sm grow" id="seqMore">${T.seqMore}</button></div>
+    <div class="small muted" style="margin-top:8px">${T.seqHint(plafond)}</div>`);
+  box.appendChild(barre);
+  $('#seqLess').disabled = seq.length<=1;
+  $('#seqMore').disabled = seq.length>=15;
+  $('#seqLess').onclick=()=>{ seq.pop(); buzz(); renderSetup2(); };
+  $('#seqMore').onclick=()=>{ seq.push(Math.min(seq[seq.length-1]||1, plafond)); buzz(); renderSetup2(); };
+}
 
 /* ---------- Règles maison ---------- */
 /* Règles encore en jeu. Une règle retirée continue de compter dans les
@@ -2261,6 +2422,11 @@ function buildTable(node, st, game, editable){
   let head='<tr><th>'+T.colPlayer+'</th>';
   for(let i=0;i<played;i++) head+=`<th data-r="${idx[i]}">${T.colRound(idx[i]+1)}</th>`;
   head+='<th>'+T.colTotal+'</th></tr>';
+  /* Le livret demande de noter le nombre de cartes de chaque manche : avec une
+     variante de distribution, il ne se deduit plus du numero de la manche. */
+  head+='<tr class="cards"><th>'+T.colCards+'</th>';
+  for(let i=0;i<played;i++) head+='<th>'+cardsForRound(G.cfg, G.players.length, idx[i])+'</th>';
+  head+='<th></th></tr>';
   let body='';
   G.players.forEach(p=>{
     body+=`<tr><td>${esc(p.name)}</td>`;
