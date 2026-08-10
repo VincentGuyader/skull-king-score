@@ -19,7 +19,7 @@ export function cartesOracle(cfg, joueurs, manche) {
   const seq = cfg && Array.isArray(cfg.seq) && cfg.seq.length ? cfg.seq : null;
   let voulu = manche + 1;
   if (seq) {
-    const v = seq[manche] != null ? seq[manche] : seq[seq.length - 1];
+    const v = manche < seq.length ? seq[manche] : seq[seq.length - 1];
     if (Number.isInteger(v) && v >= 1) voulu = v;
   }
   return Math.max(1, Math.min(voulu, plafond));

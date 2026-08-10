@@ -138,9 +138,9 @@ test('le paquet garde le dernier mot a huit joueurs', async ({ page }) => {
   expect(cartes.every(c => c === 9), 'plafonne a 9, comme le livret le prevoit a 7 et 8 joueurs').toBe(true);
 });
 
-test('une sequence abimee revient a la progression officielle', async ({ page }) => {
+test('une sequence structurellement inutilisable est ecartee', async ({ page }) => {
   const errs = watchErrors(page);
-  for (const seq of ['oui', [], [0, 2], [1, 99], [1, null], {}]) {
+  for (const seq of ['oui', [], {}, 7, true]) {
     await boot(page, {
       roster: J,
       raw: { sk_cfg: JSON.stringify({ deal: 'custom', seq, rounds: 5, custom: [] }) },
@@ -150,6 +150,18 @@ test('une sequence abimee revient a la progression officielle', async ({ page })
     await expect(page.locator('#go'), 'l ecran reste utilisable').toBeEnabled();
   }
   expect(errs).toEqual([]);
+});
+
+test('une valeur illisible ne fait pas tomber les valeurs voisines', async ({ page }) => {
+  /* Reparation par element : une manche illisible reprend son rang, les
+     autres gardent la valeur saisie. C'est la meme regle des deux cotes,
+     celle qui evite de recompter une manche deja verrouillee. */
+  await boot(page, { roster: J, lastsel: ['j0', 'j1', 'j2'] });
+  const cartes = await page.evaluate(() => {
+    const cfg = { loot: true, kraken: true, whale: true, seq: [0, 2, null, 6] };
+    return [0, 1, 2, 3].map(i => cardsForRound(cfg, 3, i));
+  });
+  expect(cartes).toEqual([1, 2, 3, 6]);
 });
 
 test('une partie sans sequence garde le comportement d avant', async ({ page }) => {

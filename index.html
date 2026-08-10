@@ -350,10 +350,11 @@ function cardsForRound(cfg, nPlayers, roundIdx){
   const seq = cfg && Array.isArray(cfg.seq) && cfg.seq.length ? cfg.seq : null;
   let voulu = roundIdx+1;
   if(seq){
-    const v = seq[roundIdx] != null ? seq[roundIdx] : seq[seq.length-1];
-    /* Une entree qui n'est pas un nombre de cartes plausible est ignoree :
-       les parties archivees ne repassent pas par safeCfg, et une valeur
-       etrangere donnerait NaN sur toute la feuille de score. */
+    const v = roundIdx < seq.length ? seq[roundIdx] : seq[seq.length-1];
+    /* Réparation par élément : une entrée illisible reprend le rang de sa
+       manche sans emporter les valeurs voisines. Le paquet reste le seul
+       plafond, ce qui aligne l'éditeur, le stockage et la lecture sur une
+       borne unique. */
     if(Number.isInteger(v) && v >= 1) voulu = v;
   }
   return Math.max(1, Math.min(voulu, maxCards(cfg,nPlayers)));
@@ -662,12 +663,13 @@ function validGame(g){
 function safeCfg(cfg){
   const c = (cfg && typeof cfg==='object' && !Array.isArray(cfg)) ? cfg : {};
   if(!Array.isArray(c.custom)) c.custom = [];
-  /* Une sequence de distribution abimee revient a la progression officielle
-     plutot qu'a des manches sans cartes. */
-  if(c.seq != null){
-    const ok = Array.isArray(c.seq) && c.seq.length
-      && c.seq.every(v => Number.isInteger(v) && v >= 1 && v <= 15);
-    if(!ok){ delete c.seq; delete c.deal; }
+  /* Une séquence structurellement inutilisable est écartée. Les valeurs,
+     elles, ne sont jamais réécrites ici : leur réparation vit dans
+     cardsForRound, sur le chemin de lecture, pour qu'une partie archivée,
+     qui ne passe jamais par safeCfg, soit comptée exactement comme la même
+     partie reprise après un rechargement. */
+  if(c.seq != null && (!Array.isArray(c.seq) || !c.seq.length)){
+    delete c.seq; delete c.deal;
   }
   return c;
 }
