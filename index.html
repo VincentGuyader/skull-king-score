@@ -18,7 +18,7 @@
   --line:rgba(255,255,255,.10); --ink:#fff; --ink-2:#c3c2b7; --muted:#8b95a1;
   --gold:#e0b567; --gold-dim:#8a6b2f; --danger:#d03b3b; --good:#0ca30c; --warn:#fab219;
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
-  --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; --s9:#2aa4b8;
   --r:14px; --tap:46px;
   --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
 }
@@ -318,28 +318,43 @@ tfoot td{font-weight:800;background:var(--surface-2)}
 <script>
 /*ENGINE_START*/
 /* ===== Moteur de score Skull King : pur, testable ===================== */
-const DECK = {base:70, loot:2, kraken:1, whale:1}; // 56 couleurs + 5 fuites + 5 pirates + tigresse + SK + 2 sirènes
+const DECK = {base:70, loot:2, kraken:1, whale:1, ext:19}; // 56 couleurs + 5 fuites + 5 pirates + tigresse + SK + 2 sirènes
+/* Extension officielle : 7, 8 et 0/14 des quatre couleurs, Joker 15, Mary
+   Thorne, Second, Supplice de la planche, Raie tachetée, Dernière salve,
+   Casier de Davy Jones. Avec tout cela, neuf joueurs jouent dix manches. */
 
 const PIRATES = [
   {k:'rosie',   nom:"Rosie D'Laney",   pouvoir:"Désigne qui entame le pli suivant, elle-même comprise"},
   {k:'bendt',   nom:"Bendt le Bandit", pouvoir:"Pioche 2 cartes du talon, puis en défausse 2"},
   {k:'rascal',  nom:"Rascal de Roatán",pouvoir:"Parie 0, 10 ou 20 points sur sa propre annonce"},
   {k:'juanita', nom:"Juanita Jade",    pouvoir:"Consulte en secret les cartes non distribuées"},
-  {k:'harry',   nom:"Harry le Géant",  pouvoir:"Modifie son annonce de +1, -1, ou la laisse"}
+  {k:'harry',   nom:"Harry le Géant",  pouvoir:"Modifie son annonce de +1, -1, ou la laisse"},
+  {k:'mary',    nom:"Mary Thorne",     pouvoir:"Tire une carte au hasard chez un joueur, qui devra la jouer au pli suivant", need:'ext'}
 ];
+/* Pirates disponibles dans une configuration : Mary Thorne n'existe qu'avec
+   l'extension. */
+function pirates(cfg){ return PIRATES.filter(p=>!p.need || (cfg && cfg[p.need])); }
 
 const BONUS_DEFS = [
   {k:'c14',   pts:10, max:3, i:'b14'},
   {k:'b14',   pts:20, max:1, i:'bb14'},
   {k:'mByP',  pts:20, max:2, i:'bmp'},
-  {k:'pBySK', pts:30, max:5, i:'bpsk'},
+  {k:'pBySK', pts:30, max:5, extMax:6, i:'bpsk'},
   {k:'skByM', pts:40, max:1, i:'bskm'},
   {k:'loot',  pts:20, max:2, i:'bloot', need:'loot'},
+  {k:'e8',    pts:5,  max:4, i:'be8',   need:'ext'},
+  {k:'e7',    pts:-5, max:4, i:'be7',   need:'ext'},
+  {k:'dj',    pts:20, max:3, i:'bdj',   need:'ext'},
+  {k:'mate',  pts:30, max:1, i:'bmate', need:'ext'},
   {k:'free',  pts:1,  max:0, i:'bfree', free:true}
 ];
+/* Plafond d'un compteur : un pirate de plus à capturer avec l'extension. */
+function bonusMax(d, cfg){ return (cfg && cfg.ext && d.extMax) ? d.extMax : d.max; }
+/* Joueurs admis à la table : neuf avec l'extension, huit sinon. */
+function maxPlayers(cfg){ return (cfg && cfg.ext) ? 9 : 8; }
 
 function deckSize(cfg){
-  return DECK.base + (cfg.loot?DECK.loot:0) + (cfg.kraken?DECK.kraken:0) + (cfg.whale?DECK.whale:0);
+  return DECK.base + (cfg.loot?DECK.loot:0) + (cfg.kraken?DECK.kraken:0) + (cfg.whale?DECK.whale:0) + (cfg.ext?DECK.ext:0);
 }
 function maxCards(cfg, nPlayers){ return Math.floor(deckSize(cfg)/Math.max(2,nPlayers)); }
 /* Cartes distribuees a la manche roundIdx (base 0).
@@ -367,6 +382,10 @@ function bonusSplit(b, cfg){
   if(!b) return {cond, free};
   for(const d of BONUS_DEFS){
     const v = b[d.k]||0; if(!v) continue;
+    /* Un compteur d'une option absente de la partie ne vaut rien : la ligne
+       n'est pas proposée à la saisie, et une valeur qui s'y trouverait
+       quand même ne doit pas changer un score que la table ne peut pas voir. */
+    if(d.need && !(cfg && cfg[d.need])) continue;
     if(d.free) free += v; else cond += v*d.pts;
   }
   ((cfg && cfg.custom) || []).forEach(c=>{
@@ -549,7 +568,7 @@ function filterGames(games, f){
 }
 /* ===== Couleurs : lisibilité et distinction ========================== */
 const SURFACE='#16202b';               // fond des cartes, référence de contraste
-const SERIES_HEX=['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
+const SERIES_HEX=['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767','#2aa4b8'];
 const PICTOS=['☠️','💀','🏴‍☠️','⚓','🚢','⛵','🛶','🗡️','⚔️','🔱','🪝','🧭','🗺️','💰','💎','👑','🪙','🍺','🥃','🍻',
               '🦜','🐙','🦑','🦈','🐋','🐬','🐠','🦀','🦞','🐚','🪸','🏝️','🌴','🥥','🌊','🌀','⛈️','⚡','🔥','🕯️',
               '🔭','⏳','🧿','🎣','⛓️','🦴','👻','🌙','⭐','🧜'];
@@ -684,7 +703,7 @@ fr:{
   done:'Terminé', cancel:'Annuler', saveBtn:'Enregistrer', add:'Ajouter', manage:'Gérer',
   detailBadge:'détail', players:'Joueurs', menu:'Menu', langTitle:'Langue',
   /* configuration */
-  newGame:'Nouvelle partie', playersRange:'Joueurs (2 à 8)',
+  newGame:'Nouvelle partie', playersRange:n=>'Joueurs (2 à '+n+')',
   noRoster:"Aucun joueur enregistré. Créez-les une fois, ils seront proposés à chaque partie et suivis dans le hall of fame.",
   newPlayer:'+ Nouveau joueur', inGame:i=>'joueur '+i, outGame:'hors partie',
   closeColors:l=>'Couleurs très proches sur la courbe : '+l+'. Modifiez-en une depuis « Gérer » si ça vous gêne.',
@@ -696,6 +715,7 @@ fr:{
   optLoot:'Cartes Butin', optLootD:'Alliance : +20 si les 2 alliés réussissent',
   optKraken:'Kraken', optKrakenD:'Le pli est détruit, la somme des plis peut être inférieure',
   optWhale:'Baleine blanche', optWhaleD:'Les cartes spéciales sont annulées',
+  optExt:'Extension', optExtD:'19 cartes de plus, jusqu’à 9 joueurs : bonus des 7 et 8, Mary Thorne, Second, Davy Jones',
   optPirates:'Pirates nommés', optPiratesD:'Règles avancées : chaque pirate a un pouvoir, dont le pari du Rascal',
   optBonusIf:'Bonus seulement si annonce juste', optBonusIfD:'Règle officielle. Décochez si vous comptez les bonus dans tous les cas',
   houseRules:'Règles maison', addHouse:'+ Ajouter une carte ou une pénalité maison',
@@ -746,6 +766,10 @@ fr:{
   bpsk:'Pirate pris par le Skull King', bpskd:'+30 chacun',
   bskm:'Skull King pris par une sirène', bskmd:'+40',
   bloot:'Butin réussi', blootd:'+20 si les 2 alliés annoncent juste',
+  be8:'8 de l’extension capturé', be8d:'+5 chacun',
+  be7:'7 de l’extension capturé', be7d:'−5 chacun',
+  bdj:'Monstre coulé par Davy Jones', bdjd:'Kraken, Baleine ou Raie, +20 chacun',
+  bmate:'Second pris par le Skull King ou une sirène', bmated:'+30',
   bfree:'Points libres', bfreed:'ajustement manuel',
   /* ajustement rapide */
   adjOf:n=>'Ajustement de '+n, adjSub:i=>'Manche '+i+' · pour vos cartes et règles maison ponctuelles',
@@ -756,10 +780,11 @@ fr:{
   harryTitle:n=>'Annonce de '+n,
   harryDesc:b=>'Harry le Géant permet de modifier son annonce de +1, -1, ou de la laisser. Annonce initiale : <b>'+b+'</b>.',
   harryKept:'Annonce retenue', harryBound:'bornée à plus ou moins 1', harryBack:b=>'Revenir à '+b,
-  pirNames:{rosie:"Rosie D'Laney", bendt:'Bendt le Bandit', rascal:'Rascal de Roatán', juanita:'Juanita Jade', harry:'Harry le Géant'},
+  pirNames:{rosie:"Rosie D'Laney", bendt:'Bendt le Bandit', rascal:'Rascal de Roatán', juanita:'Juanita Jade', harry:'Harry le Géant', mary:'Mary Thorne'},
   pirPow:{rosie:'Désigne qui entame le pli suivant, elle-même comprise', bendt:'Pioche 2 cartes du talon, puis en défausse 2',
           rascal:'Parie 0, 10 ou 20 points sur sa propre annonce', juanita:'Consulte en secret les cartes non distribuées',
-          harry:'Modifie son annonce de +1, -1, ou la laisse'},
+          harry:'Modifie son annonce de +1, -1, ou la laisse',
+          mary:'Tire une carte au hasard chez un joueur, qui devra la jouer au pli suivant'},
   /* règle maison */
   ruleNew:'Nouvelle règle maison', ruleEdit:'Modifier la règle',
   ruleEx:"Exemples : « Sirène d'or +25 », « Tempête -15 », « Pari doublé +50 ».",
@@ -803,6 +828,17 @@ fr:{
   hKraken:'Kraken', hKrakenD:'le pli est détruit',
   hWhale:'Baleine blanche', hWhaleD:'spéciales annulées, plus haut chiffre gagne',
   hKvW:'Kraken vs Baleine', hKvWD:'la 2ᵉ jouée l’emporte',
+  hExtTitle:'Extension',
+  hExtMate:'Second', hExtMateD:'bat tous les pirates, perd contre le Skull King et les sirènes. Utilise les pouvoirs des pirates capturés, sans bonus pour eux.',
+  hExt15:'Joker 15', hExt15D:'prend la couleur demandée (jamais noir), vaut 15. Perd contre l’atout.',
+  hExt014:'0/14', hExt014D:'0 ou 14 au choix, annoncé à la pose. Aucun bonus, même en 14.',
+  hExt78:'7 et 8', hExt78D:'cartes normales. Égalité : le premier joué gagne.',
+  hExtPlank:'Supplice de la planche', hExtPlankD:'ne gagne jamais. Retire un pirate du pli : le Skull King ne touche pas ses +30.',
+  hExtRay:'Raie tachetée', hExtRayD:'comme la Baleine, mais la plus basse carte gagne. Égalité : la première jouée.',
+  hExtVolley:'Dernière salve', hExtVolleyD:'ne gagne jamais. Rejouer une carte après tout le monde, puis sauter le dernier pli.',
+  hExtDJ:'Casier de Davy Jones', hExtDJD:'ne gagne jamais. Coule tous les monstres du pli, quel que soit l’ordre.',
+  hExtMulti:'Plusieurs monstres', hExtMultiD:'le dernier joué décide. Sans carte gagnante : pli défaussé.',
+  hExtTwo:'À 2 joueurs', hExtTwoD:'retirer le Joker 15, la Planche et les 0/14.',
   scaleOf:s=>'Barème '+s, scaleClassic:'classique', scaleRascal:'« Rascal »',
   sBidOk:'Annonce ≥ 1 réussie', sBidOkV:'20 × plis',
   sBidKo:'Annonce ≥ 1 ratée', sBidKoV:'−10 × écart',
@@ -877,7 +913,7 @@ fr:{
   importMerge:'Ajouter à l’historique actuel', importReplace:'Remplacer tout l’historique',
   restored:'Historique restauré', badFile:'Fichier illisible', exported:'Fichier exporté',
   badGames:n=>'Sauvegarde refusée : '+n+' partie'+(n>1?'s sont inexploitables':' est inexploitable')+'. Rien n’a été modifié.',
-  copied:'Résultat copié', maxEight:'8 joueurs maximum',
+  copied:'Résultat copié', maxPlayers:n=>n+' joueurs maximum',
   aboutTitle:'À propos et mentions',
   aboutWhat:'Compteur de points non officiel. Tout reste sur votre appareil : aucune donnée n’est envoyée nulle part, et l’application fonctionne hors-ligne.',
   aboutLegal:'Skull King® est une marque déposée de Grandpa Beck’s Games, qui édite le jeu. Cette application est indépendante : elle n’est ni éditée, ni approuvée, ni sponsorisée par l’éditeur. Les règles du jeu restent la propriété de leurs auteurs.',
@@ -902,7 +938,7 @@ en:{
   loc:'en-GB', langName:'English',
   done:'Done', cancel:'Cancel', saveBtn:'Save', add:'Add', manage:'Manage',
   detailBadge:'detail', players:'Players', menu:'Menu', langTitle:'Language',
-  newGame:'New game', playersRange:'Players (2 to 8)',
+  newGame:'New game', playersRange:n=>'Players (2 to '+n+')',
   noRoster:'No players saved yet. Create them once and they will be offered every game and tracked in the hall of fame.',
   newPlayer:'+ New player', inGame:i=>'player '+i, outGame:'not playing',
   closeColors:l=>'Very close colours on the chart: '+l+'. Change one from “Manage” if it bothers you.',
@@ -914,6 +950,7 @@ en:{
   optLoot:'Loot cards', optLootD:'Alliance: +20 if both allies bid correctly',
   optKraken:'Kraken', optKrakenD:'The trick is destroyed, so tricks may add up to less',
   optWhale:'White Whale', optWhaleD:'Special cards are cancelled',
+  optExt:'Expansion', optExtD:'19 more cards, up to 9 players: 7 and 8 bonuses, Mary Thorne, First Mate, Davy Jones',
   optPirates:'Named pirates', optPiratesD:"Advanced rules: each pirate has a power, including the Rascal's wager",
   optBonusIf:'Bonuses only on a correct bid', optBonusIfD:'Official rule. Uncheck if your group always counts bonuses',
   houseRules:'House rules', addHouse:'+ Add a house card or penalty',
@@ -961,6 +998,10 @@ en:{
   bpsk:'Pirate taken by the Skull King', bpskd:'+30 each',
   bskm:'Skull King taken by a mermaid', bskmd:'+40',
   bloot:'Loot successful', blootd:'+20 if both allies bid correctly',
+  be8:'Expansion 8 captured', be8d:'+5 each',
+  be7:'Expansion 7 captured', be7d:'−5 each',
+  bdj:'Sea monster sunk by Davy Jones', bdjd:'Kraken, Whale or Stingray, +20 each',
+  bmate:'First Mate taken by the Skull King or a mermaid', bmated:'+30',
   bfree:'Free points', bfreed:'manual adjustment',
   adjOf:n=>'Adjustment for '+n, adjSub:i=>'Round '+i+' · for your one-off cards and house rules',
   openFull:'Open the full bonus sheet',
@@ -969,10 +1010,11 @@ en:{
   harryTitle:n=>'Bid of '+n,
   harryDesc:b=>'Harry the Giant lets you change your bid by +1, -1, or leave it. Original bid: <b>'+b+'</b>.',
   harryKept:'Bid kept', harryBound:'limited to plus or minus 1', harryBack:b=>'Back to '+b,
-  pirNames:{rosie:"Rosie D'Laney", bendt:'Bendt the Bandit', rascal:'Rascal of Roatan', juanita:'Juanita Jade', harry:'Harry the Giant'},
+  pirNames:{rosie:"Rosie D'Laney", bendt:'Bendt the Bandit', rascal:'Rascal of Roatan', juanita:'Juanita Jade', harry:'Harry the Giant', mary:'Mary Thorne'},
   pirPow:{rosie:'Choose any player, including yourself, to lead the next trick', bendt:'Add 2 cards from the deck, then discard 2',
           rascal:'Bet 0, 10 or 20 points on your own bid', juanita:'Privately look through the cards not dealt this round',
-          harry:'Change your bid by +1, -1, or leave it'},
+          harry:'Change your bid by +1, -1, or leave it',
+          mary:'Draw a random card from any hand; that player must play it in the next trick'},
   ruleNew:'New house rule', ruleEdit:'Edit the rule',
   ruleEx:'Examples: “Golden mermaid +25”, “Storm -15”, “Double bet +50”.',
   ruleName:'Name of the card or rule', rulePts:'Points per copy', rulePtsD:'negative for a penalty',
@@ -1013,6 +1055,17 @@ en:{
   hKraken:'Kraken', hKrakenD:'the trick is destroyed',
   hWhale:'White Whale', hWhaleD:'specials cancelled, highest number wins',
   hKvW:'Kraken vs Whale', hKvWD:'the second one played wins',
+  hExtTitle:'Expansion',
+  hExtMate:'First Mate Con', hExtMateD:'beats all pirates, loses to the Skull King and mermaids. Uses the powers of captured pirates, no bonus for them.',
+  hExt15:'Wild 15', hExt15D:'takes the suit led (never black), worth 15. Loses to trump.',
+  hExt014:'0/14', hExt014D:'0 or 14, declared when played. No bonus, even as a 14.',
+  hExt78:'7s and 8s', hExt78D:'normal suited cards. Tie: the first played wins.',
+  hExtPlank:'Walk the Plank', hExtPlankD:'never wins. Removes one pirate from the trick: the Skull King gets no +30 for it.',
+  hExtRay:'Spotted Stingray', hExtRayD:'like the Whale, but the lowest card wins. Tie: the first played.',
+  hExtVolley:'Last Volley', hExtVolleyD:'never wins. Play one more card after everyone, then skip the last trick.',
+  hExtDJ:'Davy Jones’ Locker', hExtDJD:'never wins. Sinks every sea monster in the trick, whatever the order.',
+  hExtMulti:'Several sea monsters', hExtMultiD:'the last one played decides. No winning card: the trick is discarded.',
+  hExtTwo:'With 2 players', hExtTwoD:'remove the Wild 15, Walk the Plank and the 0/14s.',
   scaleOf:s=>s+' scoring', scaleClassic:'Classic', scaleRascal:'“Rascal”',
   sBidOk:'Bid ≥ 1 made', sBidOkV:'20 × tricks',
   sBidKo:'Bid ≥ 1 missed', sBidKoV:'−10 × difference',
@@ -1080,7 +1133,7 @@ en:{
   importMerge:'Add to the current history', importReplace:'Replace the whole history',
   restored:'History restored', badFile:'Unreadable file', exported:'File exported',
   badGames:n=>'Backup rejected: '+n+' game'+(n>1?'s are':' is')+' unusable. Nothing was changed.',
-  copied:'Result copied', maxEight:'8 players maximum',
+  copied:'Result copied', maxPlayers:n=>n+' players maximum',
   aboutTitle:'About and legal',
   aboutWhat:'Unofficial score keeper. Everything stays on your device: nothing is sent anywhere, and the app works offline.',
   aboutLegal:'Skull King® is a registered trademark of Grandpa Beck’s Games, the publisher of the game. This app is independent: it is not published, endorsed or sponsored by them. The rules of the game remain the property of their authors.',
@@ -1104,7 +1157,7 @@ de:{
   loc:'de-DE', langName:'Deutsch',
   done:'Fertig', cancel:'Abbrechen', saveBtn:'Speichern', add:'Hinzufügen', manage:'Verwalten',
   detailBadge:'Details', players:'Spieler', menu:'Menü', langTitle:'Sprache',
-  newGame:'Neue Partie', playersRange:'Spieler (2 bis 8)',
+  newGame:'Neue Partie', playersRange:n=>'Spieler (2 bis '+n+')',
   noRoster:'Noch keine Spieler gespeichert. Einmal anlegen, danach stehen sie in jeder Partie zur Auswahl und zählen für die Ruhmeshalle.',
   newPlayer:'+ Neuer Spieler', inGame:i=>'Spieler '+i, outGame:'nicht dabei',
   closeColors:l=>'Sehr ähnliche Farben im Diagramm: '+l+'. Ändere eine davon über „Verwalten“, falls es stört.',
@@ -1116,6 +1169,7 @@ de:{
   optLoot:'Beute-Karten', optLootD:'Bündnis: +20, wenn beide Verbündeten richtig ansagen',
   optKraken:'Krake', optKrakenD:'Der Stich wird vernichtet, die Summe der Stiche kann kleiner sein',
   optWhale:'Weißer Wal', optWhaleD:'Sonderkarten werden aufgehoben',
+  optExt:'Erweiterung', optExtD:'19 Karten mehr, bis zu 9 Spieler: Bonus für 7 und 8, Mary Thorne, Erster Maat, Davy Jones',
   optPirates:'Benannte Piraten', optPiratesD:'Fortgeschrittene Regeln: jeder Pirat hat eine Fähigkeit, darunter die Wette des Rascal',
   optBonusIf:'Bonus nur bei richtiger Ansage', optBonusIfD:'Offizielle Regel. Abwählen, wenn ihr Boni immer zählt',
   houseRules:'Hausregeln', addHouse:'+ Eigene Karte oder Strafe hinzufügen',
@@ -1163,6 +1217,10 @@ de:{
   bpsk:'Pirat vom Skull King gefangen', bpskd:'je +30',
   bskm:'Skull King von einer Meerjungfrau gefangen', bskmd:'+40',
   bloot:'Beute geglückt', blootd:'+20, wenn beide Verbündeten richtig ansagen',
+  be8:'8 der Erweiterung gefangen', be8d:'je +5',
+  be7:'7 der Erweiterung gefangen', be7d:'je −5',
+  bdj:'Seeungeheuer von Davy Jones versenkt', bdjd:'Krake, Wal oder Rochen, je +20',
+  bmate:'Erster Maat vom Skull King oder einer Meerjungfrau gefangen', bmated:'+30',
   bfree:'Freie Punkte', bfreed:'manuelle Anpassung',
   adjOf:n=>'Korrektur für '+n, adjSub:i=>'Durchgang '+i+' · für einmalige Karten und Hausregeln',
   openFull:'Vollständiges Bonusblatt öffnen',
@@ -1171,10 +1229,11 @@ de:{
   harryTitle:n=>'Ansage von '+n,
   harryDesc:b=>'Harry der Riese erlaubt, die Ansage um +1 oder -1 zu ändern oder zu lassen. Ursprüngliche Ansage: <b>'+b+'</b>.',
   harryKept:'Gültige Ansage', harryBound:'auf plus oder minus 1 begrenzt', harryBack:b=>'Zurück auf '+b,
-  pirNames:{rosie:"Rosie D'Laney", bendt:'Bendt der Bandit', rascal:'Rascal von Roatán', juanita:'Juanita Jade', harry:'Harry der Riese'},
+  pirNames:{rosie:"Rosie D'Laney", bendt:'Bendt der Bandit', rascal:'Rascal von Roatán', juanita:'Juanita Jade', harry:'Harry der Riese', mary:'Mary Thorne'},
   pirPow:{rosie:'Bestimmt, wer den nächsten Stich eröffnet, auch sich selbst', bendt:'Zieht 2 Karten vom Stapel und legt dann 2 ab',
           rascal:'Wettet 0, 10 oder 20 Punkte auf die eigene Ansage', juanita:'Sieht heimlich die nicht ausgeteilten Karten an',
-          harry:'Ändert die eigene Ansage um +1, -1 oder gar nicht'},
+          harry:'Ändert die eigene Ansage um +1, -1 oder gar nicht',
+          mary:'Zieht blind eine Karte aus einer Hand; dieser Spieler muss sie im nächsten Stich spielen'},
   ruleNew:'Neue Hausregel', ruleEdit:'Regel bearbeiten',
   ruleEx:'Beispiele: „Goldene Meerjungfrau +25“, „Sturm -15“, „Doppelte Wette +50“.',
   ruleName:'Name der Karte oder Regel', rulePts:'Punkte pro Exemplar', rulePtsD:'negativ für eine Strafe',
@@ -1215,6 +1274,17 @@ de:{
   hKraken:'Krake', hKrakenD:'der Stich wird vernichtet',
   hWhale:'Weißer Wal', hWhaleD:'Sonderkarten aufgehoben, die höchste Zahl gewinnt',
   hKvW:'Krake gegen Wal', hKvWD:'die zuletzt gespielte gewinnt',
+  hExtTitle:'Erweiterung',
+  hExtMate:'Erster Maat', hExtMateD:'schlägt alle Piraten, verliert gegen Skull King und Meerjungfrauen. Nutzt die Fähigkeiten gefangener Piraten, ohne Bonus für sie.',
+  hExt15:'Joker 15', hExt15D:'nimmt die angespielte Farbe an (nie Schwarz), Wert 15. Verliert gegen Trumpf.',
+  hExt014:'0/14', hExt014D:'0 oder 14, beim Ausspielen angesagt. Kein Bonus, auch als 14.',
+  hExt78:'7 und 8', hExt78D:'normale Farbkarten. Gleichstand: die zuerst gespielte gewinnt.',
+  hExtPlank:'Über die Planke', hExtPlankD:'gewinnt nie. Entfernt einen Piraten aus dem Stich: der Skull King bekommt dafür keine +30.',
+  hExtRay:'Gefleckter Rochen', hExtRayD:'wie der Wal, aber die niedrigste Karte gewinnt. Gleichstand: die zuerst gespielte.',
+  hExtVolley:'Letzte Salve', hExtVolleyD:'gewinnt nie. Nach allen eine weitere Karte spielen, dann den letzten Stich aussetzen.',
+  hExtDJ:'Davy Jones’ Kiste', hExtDJD:'gewinnt nie. Versenkt alle Seeungeheuer im Stich, egal in welcher Reihenfolge.',
+  hExtMulti:'Mehrere Seeungeheuer', hExtMultiD:'das zuletzt gespielte entscheidet. Ohne Gewinnerkarte: Stich wird abgeworfen.',
+  hExtTwo:'Zu zweit', hExtTwoD:'Joker 15, Planke und die 0/14 herausnehmen.',
   scaleOf:s=>'Wertung '+s, scaleClassic:'klassisch', scaleRascal:'„Rascal“',
   sBidOk:'Ansage ≥ 1 getroffen', sBidOkV:'20 × Stiche',
   sBidKo:'Ansage ≥ 1 verfehlt', sBidKoV:'−10 × Abweichung',
@@ -1282,7 +1352,7 @@ de:{
   importMerge:'Zur aktuellen Chronik hinzufügen', importReplace:'Gesamte Chronik ersetzen',
   restored:'Chronik wiederhergestellt', badFile:'Datei nicht lesbar', exported:'Datei exportiert',
   badGames:n=>'Sicherung abgelehnt: '+n+' Partie'+(n>1?'n sind':' ist')+' unbrauchbar. Nichts wurde geändert.',
-  copied:'Ergebnis kopiert', maxEight:'höchstens 8 Spieler',
+  copied:'Ergebnis kopiert', maxPlayers:n=>'höchstens '+n+' Spieler',
   aboutTitle:'Über und Rechtliches',
   aboutWhat:'Inoffizieller Punktezähler. Alles bleibt auf deinem Gerät: nichts wird irgendwohin gesendet, und die App läuft offline.',
   aboutLegal:'Skull King® ist eine eingetragene Marke von Grandpa Beck’s Games, dem Verlag des Spiels. Diese App ist unabhängig: sie wird vom Verlag weder herausgegeben noch unterstützt oder gesponsert. Die Spielregeln bleiben Eigentum ihrer Urheber.',
@@ -1306,7 +1376,7 @@ es:{
   loc:'es-ES', langName:'Español',
   done:'Listo', cancel:'Cancelar', saveBtn:'Guardar', add:'Añadir', manage:'Gestionar',
   detailBadge:'detalle', players:'Jugadores', menu:'Menú', langTitle:'Idioma',
-  newGame:'Nueva partida', playersRange:'Jugadores (2 a 8)',
+  newGame:'Nueva partida', playersRange:n=>'Jugadores (2 a '+n+')',
   noRoster:'Todavía no hay jugadores guardados. Créalos una vez y aparecerán en cada partida, con seguimiento en el salón de la fama.',
   newPlayer:'+ Nuevo jugador', inGame:i=>'jugador '+i, outGame:'fuera de partida',
   closeColors:l=>'Colores muy parecidos en la gráfica: '+l+'. Cambia uno desde «Gestionar» si te molesta.',
@@ -1318,6 +1388,7 @@ es:{
   optLoot:'Cartas de Botín', optLootD:'Alianza: +20 si los 2 aliados aciertan',
   optKraken:'Kraken', optKrakenD:'La baza se destruye, la suma de bazas puede ser menor',
   optWhale:'Ballena Blanca', optWhaleD:'Las cartas especiales quedan anuladas',
+  optExt:'Expansión', optExtD:'19 cartas más, hasta 9 jugadores: bonificación de 7 y 8, Mary Thorne, Segundo de a bordo, Davy Jones',
   optPirates:'Piratas con nombre', optPiratesD:'Reglas avanzadas: cada pirata tiene un poder, incluida la apuesta del Rascal',
   optBonusIf:'Bonificaciones solo si la apuesta es exacta', optBonusIfD:'Regla oficial. Desmárcala si en tu grupo siempre cuentan',
   houseRules:'Reglas de la casa', addHouse:'+ Añadir una carta o penalización propia',
@@ -1365,6 +1436,10 @@ es:{
   bpsk:'Pirata capturado por el Skull King', bpskd:'+30 cada uno',
   bskm:'Skull King capturado por una sirena', bskmd:'+40',
   bloot:'Botín conseguido', blootd:'+20 si los 2 aliados aciertan',
+  be8:'8 de la expansión capturado', be8d:'+5 cada uno',
+  be7:'7 de la expansión capturado', be7d:'−5 cada uno',
+  bdj:'Monstruo hundido por Davy Jones', bdjd:'Kraken, Ballena o Raya, +20 cada uno',
+  bmate:'Segundo capturado por el Skull King o una sirena', bmated:'+30',
   bfree:'Puntos libres', bfreed:'ajuste manual',
   adjOf:n=>'Ajuste de '+n, adjSub:i=>'Ronda '+i+' · para tus cartas y reglas puntuales',
   openFull:'Abrir la hoja de bonificaciones completa',
@@ -1373,10 +1448,11 @@ es:{
   harryTitle:n=>'Apuesta de '+n,
   harryDesc:b=>'Harry el Gigante permite cambiar la apuesta en +1, -1, o dejarla. Apuesta inicial: <b>'+b+'</b>.',
   harryKept:'Apuesta final', harryBound:'limitada a más o menos 1', harryBack:b=>'Volver a '+b,
-  pirNames:{rosie:"Rosie D'Laney", bendt:'Bendt el Bandido', rascal:'Rascal de Roatán', juanita:'Juanita Jade', harry:'Harry el Gigante'},
+  pirNames:{rosie:"Rosie D'Laney", bendt:'Bendt el Bandido', rascal:'Rascal de Roatán', juanita:'Juanita Jade', harry:'Harry el Gigante', mary:'Mary Thorne'},
   pirPow:{rosie:'Elige quién abre la siguiente baza, ella incluida', bendt:'Roba 2 cartas del mazo y descarta 2',
           rascal:'Apuesta 0, 10 o 20 puntos a su propia apuesta', juanita:'Consulta en secreto las cartas no repartidas',
-          harry:'Cambia su apuesta en +1, -1, o la deja'},
+          harry:'Cambia su apuesta en +1, -1, o la deja',
+          mary:'Roba una carta al azar de cualquier mano; ese jugador debe jugarla en la siguiente baza'},
   ruleNew:'Nueva regla de la casa', ruleEdit:'Modificar la regla',
   ruleEx:'Ejemplos: «Sirena de oro +25», «Tormenta -15», «Apuesta doble +50».',
   ruleName:'Nombre de la carta o la regla', rulePts:'Puntos por ejemplar', rulePtsD:'negativo para una penalización',
@@ -1417,6 +1493,17 @@ es:{
   hKraken:'Kraken', hKrakenD:'la baza se destruye',
   hWhale:'Ballena Blanca', hWhaleD:'especiales anuladas, gana el número más alto',
   hKvW:'Kraken contra Ballena', hKvWD:'gana la segunda jugada',
+  hExtTitle:'Expansión',
+  hExtMate:'Segundo de a bordo', hExtMateD:'gana a todos los piratas, pierde ante el Skull King y las sirenas. Usa los poderes de los piratas capturados, sin bonificación por ellos.',
+  hExt15:'Comodín 15', hExt15D:'toma el color de salida (nunca negro), vale 15. Pierde ante el triunfo.',
+  hExt014:'0/14', hExt014D:'0 o 14 a elección, declarado al jugarla. Sin bonificación, incluso como 14.',
+  hExt78:'7 y 8', hExt78D:'cartas normales. Empate: gana la jugada primero.',
+  hExtPlank:'Caminar por la tabla', hExtPlankD:'nunca gana. Retira un pirata de la baza: el Skull King no cobra sus +30.',
+  hExtRay:'Raya moteada', hExtRayD:'como la Ballena, pero gana la carta más baja. Empate: la jugada primero.',
+  hExtVolley:'Última salva', hExtVolleyD:'nunca gana. Jugar una carta más después de todos y saltar la última baza.',
+  hExtDJ:'Cofre de Davy Jones', hExtDJD:'nunca gana. Hunde todos los monstruos de la baza, sea cual sea el orden.',
+  hExtMulti:'Varios monstruos', hExtMultiD:'decide el último jugado. Sin carta ganadora: la baza se descarta.',
+  hExtTwo:'A 2 jugadores', hExtTwoD:'retirar el Comodín 15, la Tabla y los 0/14.',
   scaleOf:s=>'Puntuación '+s, scaleClassic:'clásica', scaleRascal:'«Rascal»',
   sBidOk:'Apuesta ≥ 1 acertada', sBidOkV:'20 × bazas',
   sBidKo:'Apuesta ≥ 1 fallada', sBidKoV:'−10 × diferencia',
@@ -1484,7 +1571,7 @@ es:{
   importMerge:'Añadir al historial actual', importReplace:'Sustituir todo el historial',
   restored:'Historial restaurado', badFile:'Archivo ilegible', exported:'Archivo exportado',
   badGames:n=>'Copia rechazada: '+n+' partida'+(n>1?'s son inservibles':' es inservible')+'. No se ha cambiado nada.',
-  copied:'Resultado copiado', maxEight:'8 jugadores como máximo',
+  copied:'Resultado copiado', maxPlayers:n=>n+' jugadores como máximo',
   aboutTitle:'Acerca de y avisos legales',
   aboutWhat:'Contador de puntos no oficial. Todo se queda en tu dispositivo: no se envía nada a ninguna parte y la aplicación funciona sin conexión.',
   aboutLegal:'Skull King® es una marca registrada de Grandpa Beck’s Games, editorial del juego. Esta aplicación es independiente: no está editada, aprobada ni patrocinada por la editorial. Las reglas del juego siguen siendo propiedad de sus autores.',
@@ -1538,8 +1625,8 @@ function langSheet(){
 }
 
 /* ===== État ========================================================== */
-const SERIES = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
-const DEFAULT_CFG = {scoring:'classic', rascal:'grapeshot', bonusIfExact:true, loot:true, kraken:true, whale:true, pirates:true, rounds:10, custom:[]};
+const SERIES = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8','--s9'];
+const DEFAULT_CFG = {scoring:'classic', rascal:'grapeshot', bonusIfExact:true, loot:true, kraken:true, whale:true, ext:false, pirates:true, rounds:10, custom:[]};
 /* Distribution des cartes. Les six suggestions viennent du livret 2022,
    section « Nombre de cartes ». Chacune fixe aussi le nombre de manches :
    c'est la longueur de sa sequence. */
@@ -1614,7 +1701,7 @@ function pcol(p,i){
   if(r&&r.color) return r.color;
   if(p&&p.color) return p.color;
   if(p&&p.c){ const k=SERIES.indexOf(p.c); if(k>=0) return SERIES_HEX[k]; }
-  return SERIES_HEX[(i||0)%8];
+  return SERIES_HEX[(i||0)%SERIES_HEX.length];
 }
 function pico(p){ const r=p&&RMAP[p.id]; return (r&&r.icon) || (p&&p.icon) || '☠️'; }
 function avatar(p,i,cls){
@@ -1623,7 +1710,7 @@ function avatar(p,i,cls){
 }
 function freeColor(){
   const used=roster().map(p=>p.color);
-  return SERIES_HEX.find(c=>!used.includes(c)) || SERIES_HEX[used.length%8];
+  return SERIES_HEX.find(c=>!used.includes(c)) || SERIES_HEX[used.length%SERIES_HEX.length];
 }
 function freeIcon(){
   const used=roster().map(p=>p.icon);
@@ -1652,14 +1739,15 @@ function newDraft(){
   let sel = asList(Store.get('sk_lastsel', []));
   const ids = roster().map(p=>p.id);
   sel = sel.filter(id=>ids.includes(id));
-  return {sel, cfg:safeCfg(Object.assign({}, DEFAULT_CFG, safeCfg(Store.get('sk_cfg', {}))))};
+  const cfg = safeCfg(Object.assign({}, DEFAULT_CFG, safeCfg(Store.get('sk_cfg', {}))));
+  return {sel: sel.slice(0, maxPlayers(cfg)), cfg};
 }
 function startGame(){
   Store.set('sk_lastsel', draft.sel); Store.set('sk_cfg', draft.cfg);
   G = {
     id: uid('g'),
     players: draft.sel.map((id,i)=>{ const r=roster().find(x=>x.id===id)||{};
-      return {id, name:r.name||('Joueur '+(i+1)), color:r.color||SERIES_HEX[i%8], icon:r.icon||'☠️'}; }),
+      return {id, name:r.name||('Joueur '+(i+1)), color:r.color||SERIES_HEX[i%SERIES_HEX.length], icon:r.icon||'☠️'}; }),
     cfg: Object.assign({}, draft.cfg),
     rounds: Array.from({length:dealRounds(draft.cfg)},()=>({bids:{},tricks:{},bonus:{},locked:false})),
     cur:0, phase:'bid', started:Date.now()
@@ -1820,7 +1908,7 @@ function renderSetup(){
   const mc = maxCards(draft.cfg, Math.max(2,draft.sel.length));
   const el = h(`
     <div>
-      <h2>${T.playersRange}</h2>
+      <h2>${T.playersRange(maxPlayers(draft.cfg))}</h2>
       <div id="pl"></div>
       <div class="row" style="gap:8px">
         <button class="btn ghost sm grow" id="addP">${T.newPlayer}</button>
@@ -1868,7 +1956,7 @@ function renderSetup(){
     el2.onclick=()=>{
       const k=draft.sel.indexOf(p.id);
       if(k>=0) draft.sel.splice(k,1);
-      else { if(draft.sel.length>=8){ toast(T.maxEight); return; } draft.sel.push(p.id); }
+      else { if(draft.sel.length>=maxPlayers(draft.cfg)){ toast(T.maxPlayers(maxPlayers(draft.cfg))); return; } draft.sel.push(p.id); }
       buzz(); renderSetup2();
     };
     pl.appendChild(row);
@@ -1876,7 +1964,7 @@ function renderSetup(){
   const selP=draft.sel.map(id=>{ const r=RMAP[id]||{}; return {id, name:r.name||'?', color:r.color||SERIES_HEX[0]}; });
   const cp=closePairs(selP);
   if(cp.length) pl.appendChild(h(`<div class="small" style="color:var(--warn);margin:2px 2px 10px">${T.closeColors(cp.map(x=>esc(x[0].name)+' + '+esc(x[1].name)).join(', '))}</div>`));
-  $('#addP').onclick=()=>newPlayerSheet(id=>{ if(draft.sel.length<8) draft.sel.push(id); renderSetup2(); });
+  $('#addP').onclick=()=>newPlayerSheet(id=>{ if(draft.sel.length<maxPlayers(draft.cfg)) draft.sel.push(id); renderSetup2(); });
   $('#mgP').onclick=()=>go('roster');
 
   // barème
@@ -1893,15 +1981,20 @@ function renderSetup(){
 
   // options
   const opts=$('#opts');
-  const swRow=(key,label,hint)=>{
+  const swRow=(key,label,hint,after)=>{
     const r=h(`<div class="brow"><div class="lbl">${label}<small>${hint}</small></div><div class="sw ${draft.cfg[key]?'on':''}"></div></div>`);
     r.querySelector('.sw').onclick=e=>{draft.cfg[key]=!draft.cfg[key];e.target.classList.toggle('on');buzz();
-      $('#hSub').textContent = T.headSub(draft.sel.length, draft.cfg.rounds);};
+      $('#hSub').textContent = T.headSub(draft.sel.length, draft.cfg.rounds);
+      if(after) after();};
     opts.appendChild(r);
   };
   swRow('loot',T.optLoot,T.optLootD);
   swRow('kraken',T.optKraken,T.optKrakenD);
   swRow('whale',T.optWhale,T.optWhaleD);
+  /* L'extension change le paquet, donc le plafond de cartes, et le nombre de
+     joueurs admis : l'ecran se redessine, et un neuvieme joueur deja choisi
+     sort de la table si l'option est retiree. */
+  swRow('ext',T.optExt,T.optExtD,()=>{ draft.sel=draft.sel.slice(0, maxPlayers(draft.cfg)); renderSetup2(); });
   swRow('pirates',T.optPirates,T.optPiratesD);
   if(draft.cfg.scoring==='classic') swRow('bonusIfExact',T.optBonusIf,T.optBonusIfD);
 
@@ -2285,7 +2378,7 @@ function bonusSheet(p, ri, repaint){
       wrap.querySelectorAll('[data-w]').forEach(btn=>btn.onclick=()=>{ b.wager=+btn.dataset.w; buzz(); save(); paintWager(); upTot(); });
     };
     const pg=$('#bp');
-    PIRATES.forEach(pi=>{
+    pirates(G.cfg).forEach(pi=>{
       const on=b.pir.includes(pi.k);
       const c=h(`<button class="pchip ${on?'on':''}"><span class="pk">${on?'⚑':'○'}</span><span><span class="pn">${T.pirNames[pi.k]}</span><span class="pp">${T.pirPow[pi.k]}</span></span></button>`).firstElementChild;
       c.onclick=()=>{
@@ -2300,7 +2393,7 @@ function bonusSheet(p, ri, repaint){
     });
     paintWager();
   }
-  defs.forEach(d=>addRow($('#bl'), T[d.i], T[d.i+'d'], d.k, Math.min(d.max, Math.max(1,cards))));
+  defs.forEach(d=>addRow($('#bl'), T[d.i], T[d.i+'d'], d.k, Math.min(bonusMax(d, G.cfg), Math.max(1,cards))));
   customs.forEach(c=>addRow($('#bc'), esc(c.name), `${sgn(c.pts)} pts${c.tricks?' · '+T.ruleWorth(c.tricks):''} · ${c.cond==='bid'?T.ruleTagOn:T.ruleTagOff}`, 'x'+c.id, c.max));
   freeEditor($('#bf'), b, upTot);
   upTot();
@@ -2567,14 +2660,20 @@ function renderHelp(){
       ${cfg.whale?kv(T.hWhale,T.hWhaleD):''}
       ${cfg.kraken&&cfg.whale?kv(T.hKvW,T.hKvWD):''}
     </div>
+    ${cfg.ext?`<h2>${T.hExtTitle}</h2><div class="card tight">
+      ${kv(T.hExtMate,T.hExtMateD)}${kv(T.hExt15,T.hExt15D)}${kv(T.hExt014,T.hExt014D)}${kv(T.hExt78,T.hExt78D)}
+      ${kv(T.hExtPlank,T.hExtPlankD)}${kv(T.hExtRay,T.hExtRayD)}${kv(T.hExtVolley,T.hExtVolleyD)}${kv(T.hExtDJ,T.hExtDJD)}
+      ${kv(T.hExtMulti,T.hExtMultiD)}${kv(T.hExtTwo,T.hExtTwoD)}
+    </div>`:''}
     <h2>${T.scaleOf(cfg.scoring==='rascal'?T.scaleRascal:T.scaleClassic)}</h2>
     <div class="card tight">${scoring}</div>
-    ${cfg.pirates?`<h2>${T.piratesTitle}</h2><div class="card tight">${PIRATES.map(pi=>`<div class="kv"><span>${T.pirNames[pi.k]}<br><small class="muted">${T.pirPow[pi.k]}</small></span><span>${pi.k==='rascal'?T.pirScore:T.pirInfo}</span></div>`).join('')}</div>
+    ${cfg.pirates?`<h2>${T.piratesTitle}</h2><div class="card tight">${pirates(cfg).map(pi=>`<div class="kv"><span>${T.pirNames[pi.k]}<br><small class="muted">${T.pirPow[pi.k]}</small></span><span>${pi.k==='rascal'?T.pirScore:T.pirInfo}</span></div>`).join('')}</div>
     <div class="small muted" style="margin:6px 2px 0">${T.pirFoot}</div>`:''}
     <h2>${T.bonusTitle}${cfg.scoring==='classic'&&cfg.bonusIfExact?T.bonusOnlyExact:''}</h2>
     <div class="card tight">
       ${kv(T.b14,'+10')}${kv(T.bb14,'+20')}${kv(T.bmp,'+20')}${kv(T.bpsk,'+30')}${kv(T.bskm,'+40')}
       ${cfg.loot?kv(T.bloot,'+20'):''}
+      ${cfg.ext?kv(T.be8,'+5')+kv(T.be7,'−5')+kv(T.bdj,'+20')+kv(T.bmate,'+30'):''}
     </div>
     ${liveRules(cfg).length?`<h2>${T.yourRules}</h2><div class="card tight">${liveRules(cfg).map(c=>`<div class="kv"><span>${esc(c.name)}<br><small class="muted">${c.cond==='bid'?T.ruleTagOn:T.ruleTagOff} · ${T.ruleMaxTag(c.max)}</small></span><span>${sgn(c.pts)}</span></div>`).join('')}</div>`:''}
     <div class="small muted" style="margin:10px 2px 0">${T.bonusFoot}</div>
@@ -2927,7 +3026,7 @@ function renderGameDetail(gid){
     if(G && !G.rounds.every(r=>r.locked) && !confirm(T.confirmReplace)) return;
     G=JSON.parse(JSON.stringify(g));
     G.cur=G.rounds.length-1; G.phase='bid';
-    G.players.forEach((p,i)=>p.c=p.c||SERIES[i%8]);
+    G.players.forEach((p,i)=>p.c=p.c||SERIES[i%SERIES.length]);
     save(); toast(T.gameReloaded); goRoot('scores');
   };
 }
@@ -2964,7 +3063,7 @@ function manualGameSheet(existing){
     mp.querySelectorAll('input').forEach((inp,i)=>{
       const t=inp.value.replace(/[^0-9-]/g,''); if(t==='') return;
       const id=inp.dataset.id;
-      players.push({id, name:rosterName(id)||'?', c:SERIES[players.length%8]});
+      players.push({id, name:rosterName(id)||'?', c:SERIES[players.length%SERIES.length]});
       finals[id]=parseInt(t,10)||0;
     });
     if(players.length<2){ toast(T.needTwoScores); return; }

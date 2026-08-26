@@ -36,14 +36,16 @@ const cartes = fc.integer({ min: 1, max: 15 });
 const bonus = fc.integer({ min: 0, max: 300 });
 const ajust = fc.integer({ min: -200, max: 200 });
 const pari = fc.constantFrom(0, 10, 20);
-const bareme = fc.constantFrom(CLASSIQUE, MITRAILLE, BOULET);
+/* Chaque bareme avec et sans l'extension officielle. */
+const bareme = fc.constantFrom(CLASSIQUE, MITRAILLE, BOULET,
+  { ...CLASSIQUE, ext: true }, { ...MITRAILLE, ext: true }, { ...BOULET, ext: true });
 
 function vrai(condition, message) {
   if (!condition) throw new Error(message);
 }
 const eq = (a, b, quoi) => vrai(a === b, `${quoi} : ${a} au lieu de ${b}`);
 
-const PIRATES_CLES = ['rosie', 'bendt', 'rascal', 'juanita', 'harry'];
+const PIRATES_CLES = ['rosie', 'bendt', 'rascal', 'juanita', 'harry', 'mary'];
 
 const regleMaison = fc.record({
   id: fc.constantFrom('cA', 'cB', 'cC'),
@@ -60,6 +62,8 @@ const feuilleBonus = regles => fc.record({
   c14: fc.integer({ min: 0, max: 3 }), b14: fc.integer({ min: 0, max: 1 }),
   mByP: fc.integer({ min: 0, max: 2 }), pBySK: fc.integer({ min: 0, max: 5 }),
   skByM: fc.integer({ min: 0, max: 1 }), loot: fc.integer({ min: 0, max: 2 }),
+  e8: fc.integer({ min: 0, max: 4 }), e7: fc.integer({ min: 0, max: 4 }),
+  dj: fc.integer({ min: 0, max: 3 }), mate: fc.integer({ min: 0, max: 1 }),
   free: fc.integer({ min: -80, max: 80 }),
   wager: fc.constantFrom(0, 0, 10, 20),
   pir: fc.subarray(PIRATES_CLES),
@@ -74,7 +78,7 @@ const feuilleBonus = regles => fc.record({
 /* Une partie sur deux suit une sequence de distribution : sans cela, la
    variante « Attaque eclair » et ses cousines ne seraient jamais parcourues. */
 const partieDetaillee = fc.tuple(
-  fc.integer({ min: 2, max: 8 }),
+  fc.integer({ min: 2, max: 9 }),
   fc.uniqueArray(regleMaison, { minLength: 0, maxLength: 2, selector: c => c.id }),
   bareme,
   fc.option(fc.array(fc.integer({ min: 1, max: 12 }), { minLength: 1, maxLength: 10 }), { nil: null })
@@ -238,8 +242,8 @@ export function invariants(M, opts = {}) {
     }],
 
     ['le plafond de cartes tient dans le paquet', () => {
-      fc.assert(fc.property(fc.integer({ min: 2, max: 8 }), fc.integer({ min: 0, max: 14 }),
-        fc.record({ loot: fc.boolean(), kraken: fc.boolean(), whale: fc.boolean() }), (n, ri, cfg) => {
+      fc.assert(fc.property(fc.integer({ min: 2, max: 9 }), fc.integer({ min: 0, max: 14 }),
+        fc.record({ loot: fc.boolean(), kraken: fc.boolean(), whale: fc.boolean(), ext: fc.boolean() }), (n, ri, cfg) => {
           const c = M.cardsForRound(cfg, n, ri);
           vrai(c >= 1 && c <= ri + 1, 'cartes ' + c);
           vrai(c * n <= M.deckSize(cfg), 'paquet dépassé');
@@ -352,8 +356,8 @@ export function invariants(M, opts = {}) {
     }],
 
     ['le paquet et les cartes distribuees concordent', () => {
-      fc.assert(fc.property(fc.integer({ min: 2, max: 8 }), fc.integer({ min: 0, max: 14 }),
-        fc.record({ loot: fc.boolean(), kraken: fc.boolean(), whale: fc.boolean() }), (n, ri, cfg) => {
+      fc.assert(fc.property(fc.integer({ min: 2, max: 9 }), fc.integer({ min: 0, max: 14 }),
+        fc.record({ loot: fc.boolean(), kraken: fc.boolean(), whale: fc.boolean(), ext: fc.boolean() }), (n, ri, cfg) => {
           eq(M.deckSize(cfg), paquetOracle(cfg), 'taille du paquet');
           eq(M.cardsForRound(cfg, n, ri), cartesOracle(cfg, n, ri), 'cartes distribuees');
         }), R);
@@ -362,7 +366,7 @@ export function invariants(M, opts = {}) {
     ['la sequence de distribution concorde avec le temoin', () => {
       fc.assert(fc.property(
         fc.array(fc.integer({ min: 1, max: 14 }), { minLength: 1, maxLength: 12 }),
-        fc.integer({ min: 2, max: 8 }), fc.integer({ min: 0, max: 14 }),
+        fc.integer({ min: 2, max: 9 }), fc.integer({ min: 0, max: 14 }),
         (seq, n, ri) => {
           const cfg = { loot: true, kraken: true, whale: true, seq };
           eq(M.cardsForRound(cfg, n, ri), cartesOracle(cfg, n, ri), 'cartes selon la sequence');

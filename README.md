@@ -8,6 +8,7 @@ Application web autonome, sans compte, sans serveur, qui fonctionne hors-ligne u
 - Saisie rapide des annonces et des plis avec des compteurs plus/moins, valeur par défaut 0
 - Barème Classique ou Rascal (Mitraille et Boulet)
 - Options Butin, Kraken, Baleine blanche
+- Extension officielle : 19 cartes de plus, jusqu'à 9 joueurs, bonus des 7 et 8, Davy Jones, Second, Mary Thorne
 - Pirates nommés : pouvoirs rappelés, pari du Rascal, réglage d'annonce de Harry
 - Règles maison : vos propres cartes et pénalités, avec points, quantité et plis supplémentaires
 - Bonus officiels, ajustement libre par joueur et par manche
