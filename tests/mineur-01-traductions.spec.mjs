@@ -3,7 +3,7 @@ import { boot, watchErrors, player, game, round, blank, head } from './helpers.m
 
 /* Anomalies mineures m1, m2, m3 et c1 du rapport de recette : des chaines
    ecrites en dur hors du dictionnaire, et un gabarit jamais interpole. Le
-   dictionnaire lui meme est complet, 317 cles dans les quatre langues. */
+   dictionnaire lui meme est complet, 382 cles dans les quatre langues. */
 
 const ANNE = player('jA', 'Anne', { color: '#3987e5', icon: '☠️' });
 const BOB = player('jB', 'Bob', { color: '#d95926', icon: '💀' });

@@ -19,9 +19,12 @@ export function chargerMoteur() {
     'bonusSplit', 'bonusPoints', 'roundCapacity', 'scoreRound', 'scoreRoundAll',
     'standings', 'ranks', 'leaders', 'gameResult', 'emptyStat', 'computeStats',
     'hofRank', 'filterGames', 'SERIES_HEX', 'PICTOS', 'contrast', 'deltaE',
-    'ensureReadable', 'closePairs'];
+    'ensureReadable', 'closePairs', 'bonusMax', 'pirates', 'maxPlayers'];
   /* eslint-disable no-new-func */
-  return new Function(`${source}\nreturn {${noms.join(',')}};`)();
+  /* Un nom absent du moteur vaut undefined : le test qui l'attend echoue
+     sur son assertion, pas au chargement, ce qui laisse le rouge lisible. */
+  const exports_ = noms.map(n => `${n}: typeof ${n} === 'undefined' ? undefined : ${n}`).join(',');
+  return new Function(`${source}\nreturn {${exports_}};`)();
 }
 
 export const CLASSIQUE = { scoring: 'classic', bonusIfExact: true, loot: true, kraken: true, whale: true, custom: [] };

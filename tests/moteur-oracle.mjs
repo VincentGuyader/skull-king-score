@@ -4,12 +4,17 @@
    Elle est elle-meme epinglee par les cas de reference officiels, sans quoi
    deux implantations pourraient se tromper de concert. */
 
-const PAQUET = { base: 70, loot: 2, kraken: 1, whale: 1 };
-const VALEURS = { c14: 10, b14: 20, mByP: 20, pBySK: 30, skByM: 40, loot: 20 };
+const PAQUET = { base: 70, loot: 2, kraken: 1, whale: 1, ext: 19 };
+const VALEURS = { c14: 10, b14: 20, mByP: 20, pBySK: 30, skByM: 40, loot: 20, e8: 5, e7: -5, dj: 20, mate: 30 };
+/* Compteurs qui n'existent qu'avec une option de la partie. Cette regle de
+   gel est partagee avec le moteur, pas contre-verifiee : le temoin ne peut
+   la falsifier, seuls les baremes et les valeurs le sont. */
+const OPTION = { loot: 'loot', e8: 'ext', e7: 'ext', dj: 'ext', mate: 'ext' };
 
 export function paquetOracle(cfg) {
   return PAQUET.base + (cfg.loot ? PAQUET.loot : 0)
-    + (cfg.kraken ? PAQUET.kraken : 0) + (cfg.whale ? PAQUET.whale : 0);
+    + (cfg.kraken ? PAQUET.kraken : 0) + (cfg.whale ? PAQUET.whale : 0)
+    + (cfg.ext ? PAQUET.ext : 0);
 }
 /* Sans sequence, la progression officielle. Avec une sequence, la valeur
    qu'elle indique pour cette manche, la derniere servant au-dela. Le paquet
@@ -31,7 +36,7 @@ export function bonusOracle(b, cfg) {
   let cond = 0, free = 0;
   if (!b) return { cond, free };
   for (const [cle, points] of Object.entries(VALEURS)) {
-    if (cle === 'loot' && !cfg.loot) { /* la ligne existe quand meme dans la manche */ }
+    if (OPTION[cle] && !(cfg && cfg[OPTION[cle]])) continue;
     cond += (b[cle] || 0) * points;
   }
   free += b.free || 0;

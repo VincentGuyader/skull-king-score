@@ -9,7 +9,7 @@ export const CFG = {
 };
 
 export const COLORS = ['#3987e5', '#d95926', '#199e70', '#c98500',
-                       '#d55181', '#008300', '#9085e9', '#e66767'];
+                       '#d55181', '#008300', '#9085e9', '#e66767', '#f2c94c'];
 
 /** Fiche de repertoire. */
 export function player(id, name, extra = {}) {
@@ -19,8 +19,8 @@ export function player(id, name, extra = {}) {
 /** Liste de fiches, couleurs et pictos distincts. */
 export function roster(...names) {
   const icons = ['☠️', '💀', '⚓', '🚢',
-                 '⛵', '🗺️', '💎', '👑'];
-  return names.map((name, i) => player('j' + i, name, { color: COLORS[i % 8], icon: icons[i % 8] }));
+                 '⛵', '🗺️', '💎', '👑', '🧭'];
+  return names.map((name, i) => player('j' + i, name, { color: COLORS[i % COLORS.length], icon: icons[i % icons.length] }));
 }
 
 /** Manche jouee. bids et tricks sont indexes par identifiant de joueur. */

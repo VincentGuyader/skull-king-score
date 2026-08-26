@@ -16,8 +16,9 @@ for (const [nom, verifier] of invariants(M, { runs })) {
 
 /* Defaut connu, en attente d'arbitrage sur les teintes. L'application avertit
    le joueur quand deux couleurs sont a moins de 15 d'ecart perceptuel, mais sa
-   propre palette compte 7 paires sous ce seuil sur 28, la pire a 7,1 entre le
-   orange de la serie 2 et le rouge de la serie 8. A sept ou huit joueurs,
+   propre palette compte 7 paires sous ce seuil sur 36, la pire a 7,1 entre le
+   orange de la serie 2 et le rouge de la serie 8. La neuvieme teinte, elle,
+   tient le seuil face aux huit autres. A sept ou huit joueurs,
    l'application se plaint donc de couleurs qu'elle a elle-meme distribuees, et
    deux courbes deviennent difficiles a suivre. */
 test.fixme('les couleurs de serie tiennent le seuil impose aux joueurs', () => {
