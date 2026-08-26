@@ -348,7 +348,7 @@ export function invariants(M, opts = {}) {
       }), { minLength: 0, maxLength: 3, selector: c => c.id });
       fc.assert(fc.property(avecRegles, regles => {
         const cfg = { ...CLASSIQUE, custom: regles };
-        const b = { c14: 2, b14: 1, mByP: 1, pBySK: 3, skByM: 1, loot: 2, free: -25 };
+        const b = { c14: 2, b14: 1, mByP: 1, pBySK: 3, skByM: 1, loot: 2, e8: 2, e7: 1, dj: 2, mate: 1, free: -25 };
         regles.forEach((c, i) => { b['x' + c.id] = i + 1; });
         memeObjet(M.bonusSplit(b, cfg), bonusOracle(b, cfg), 'poches de bonus');
         eq(M.bonusPoints(b, cfg), bonusOracle(b, cfg).cond + bonusOracle(b, cfg).free, 'total des bonus');
@@ -366,9 +366,9 @@ export function invariants(M, opts = {}) {
     ['la sequence de distribution concorde avec le temoin', () => {
       fc.assert(fc.property(
         fc.array(fc.integer({ min: 1, max: 14 }), { minLength: 1, maxLength: 12 }),
-        fc.integer({ min: 2, max: 9 }), fc.integer({ min: 0, max: 14 }),
-        (seq, n, ri) => {
-          const cfg = { loot: true, kraken: true, whale: true, seq };
+        fc.integer({ min: 2, max: 9 }), fc.integer({ min: 0, max: 14 }), fc.boolean(),
+        (seq, n, ri, ext) => {
+          const cfg = { loot: true, kraken: true, whale: true, ext, seq };
           eq(M.cardsForRound(cfg, n, ri), cartesOracle(cfg, n, ri), 'cartes selon la sequence');
           vrai(M.cardsForRound(cfg, n, ri) >= 1, 'jamais zero carte');
           vrai(M.cardsForRound(cfg, n, ri) <= M.maxCards(cfg, n), 'jamais plus que le paquet');
@@ -378,11 +378,13 @@ export function invariants(M, opts = {}) {
          manches sans cartes. */
       for (const seq of ['oui', 7, {}, true, [], [null, 2], ['a'],
                          [0, 3], [-2, 4], [2.5, 6], [Infinity], [NaN, 3]]) {
-        const cfg = { loot: true, kraken: true, whale: true, seq };
+        for (const ext of [false, true]) {
+        const cfg = { loot: true, kraken: true, whale: true, ext, seq };
         for (const ri of [0, 1, 4, 9]) {
           const c = M.cardsForRound(cfg, 4, ri);
           vrai(Number.isInteger(c) && c >= 1, 'sequence ' + JSON.stringify(seq) + ' donne ' + c);
           eq(c, cartesOracle(cfg, 4, ri), 'sequence ' + JSON.stringify(seq) + ', manche ' + (ri + 1));
+        }
         }
       }
       /* Les six suggestions du livret 2022, page 27. */
@@ -392,10 +394,12 @@ export function invariants(M, opts = {}) {
         whirl: [9, 9, 7, 7, 5, 5, 3, 3, 1, 1], bedtime: [1]
       };
       for (const [nom, seq] of Object.entries(livret)) {
-        const cfg = { loot: true, kraken: true, whale: true, seq };
-        seq.forEach((attendu, i) => {
-          eq(M.cardsForRound(cfg, 4, i), Math.min(attendu, M.maxCards(cfg, 4)), nom + ', manche ' + (i + 1));
-        });
+        for (const ext of [false, true]) {
+          const cfg = { loot: true, kraken: true, whale: true, ext, seq };
+          seq.forEach((attendu, i) => {
+            eq(M.cardsForRound(cfg, 4, i), Math.min(attendu, M.maxCards(cfg, 4)), nom + ', manche ' + (i + 1));
+          });
+        }
       }
     }],
 

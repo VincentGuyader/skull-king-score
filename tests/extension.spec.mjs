@@ -67,6 +67,26 @@ test('le Skull King peut capturer six pirates avec l extension', () => {
   expect(M.bonusMax(m, AVEC), 'les autres plafonds ne bougent pas').toBe(2);
 });
 
+test('les plafonds des compteurs de l extension suivent le nombre de cartes en jeu', () => {
+  const def = k => M.BONUS_DEFS.find(d => d.k === k);
+  expect(M.bonusMax(def('e8'), AVEC), 'quatre 8').toBe(4);
+  expect(M.bonusMax(def('e7'), AVEC), 'quatre 7').toBe(4);
+  expect(M.bonusMax(def('mate'), AVEC), 'un seul Second').toBe(1);
+  /* Davy Jones coule les monstres presents dans le paquet : la Raie de
+     l'extension, plus le Kraken et la Baleine s'ils sont en jeu. */
+  expect(M.bonusMax(def('dj'), AVEC), 'trois monstres').toBe(3);
+  expect(M.bonusMax(def('dj'), { ...AVEC, whale: false }), 'sans Baleine').toBe(2);
+  expect(M.bonusMax(def('dj'), { ...AVEC, kraken: false, whale: false }), 'la Raie seule').toBe(1);
+});
+
+test('un compteur d une option absente ne vaut rien, Butin compris', () => {
+  /* La ligne n'est jamais proposee sans l'option ; une valeur venue d'une
+     sauvegarde retouchee ne doit pas compter des points que la table ne voit
+     pas. */
+  expect(M.bonusPoints({ loot: 2, c14: 1 }, { ...CLASSIQUE, loot: false })).toBe(10);
+  expect(M.bonusPoints({ loot: 2, c14: 1 }, CLASSIQUE)).toBe(50);
+});
+
 test('une feuille de bonus de l extension ne vaut rien sans l option', () => {
   /* Une partie de base ne peut pas saisir ces compteurs ; s'ils se trouvent
      tout de meme dans une manche, le score reste celui du jeu de base. */
@@ -115,12 +135,24 @@ test('retirer l extension a neuf joueurs ramene la selection a huit', async ({ p
 test('une neuvieme couleur de serie est proposee quand les huit sont prises', async ({ page }) => {
   const HUIT_FICHES = NEUF.slice(0, 8);
   await boot(page, { roster: HUIT_FICHES, lastsel: HUIT_FICHES.map(p => p.id), cfg: { ext: true } });
-  const r = await page.evaluate(() => ({ libre: freeColor(), serie: SERIES_HEX.length, css: SERIES.length }));
+  const r = await page.evaluate(() => ({ libre: freeColor(), serie: SERIES_HEX.length, noms: SERIES.length }));
   expect(r.serie, 'neuf teintes').toBe(9);
-  expect(r.css, 'neuf variables CSS').toBe(9);
+  expect(r.noms, 'neuf noms de serie').toBe(9);
   expect(HUIT_FICHES.map(p => p.color), 'une couleur pas encore prise').not.toContain(r.libre);
   const lisible = await page.evaluate(c => contrast(c, SURFACE), r.libre);
   expect(lisible, 'lisible sur fond sombre').toBeGreaterThanOrEqual(3);
+  /* L'application avertit sous 15 d'ecart perceptuel : la teinte qu'elle
+     distribue elle-meme ne doit pas declencher son propre avertissement. */
+  const ecart = await page.evaluate(c => Math.min(...SERIES_HEX.slice(0, 8).map(b => deltaE(c, b))), r.libre);
+  expect(ecart, 'distincte des huit autres').toBeGreaterThanOrEqual(15);
+  await page.evaluate(() => newPlayerSheet(() => {}));
+  await page.waitForTimeout(150);
+  const grille = await page.evaluate(() => ({
+    pastilles: document.querySelectorAll('#cg > *').length,
+    colonnes: getComputedStyle(document.querySelector('#cg')).gridTemplateColumns.split(' ').length
+  }));
+  expect(grille.pastilles, 'neuf pastilles').toBe(9);
+  expect(grille.colonnes, 'sur une seule ligne').toBe(9);
 });
 
 function enResultats(cfg, bonus = {}) {
@@ -219,6 +251,9 @@ test('le dictionnaire couvre l extension dans les quatre langues', async ({ page
   expect(manquantes).toEqual([]);
   const be8 = await page.evaluate(() => ['be8', 'be7', 'bdj', 'bmate', 'optExt', 'hExtTitle'].filter(k => !I18N.fr[k]));
   expect(be8, 'cles de l extension presentes').toEqual([]);
+  /* Le livret nomme la carte "First Mate Con" : un seul nom en anglais. */
+  const en = await page.evaluate(() => [I18N.en.bmate, I18N.en.optExtD, I18N.en.hExtMate]);
+  for (const t of en) expect(t, 'nom anglais du Second').toContain('First Mate Con');
 });
 
 test('une partie de base continue de compter exactement comme avant', async ({ page }) => {

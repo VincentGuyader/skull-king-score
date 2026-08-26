@@ -18,7 +18,7 @@
   --line:rgba(255,255,255,.10); --ink:#fff; --ink-2:#c3c2b7; --muted:#8b95a1;
   --gold:#e0b567; --gold-dim:#8a6b2f; --danger:#d03b3b; --good:#0ca30c; --warn:#fab219;
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
-  --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; --s9:#2aa4b8;
+  --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; --s9:#f2c94c;
   --r:14px; --tap:46px;
   --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
 }
@@ -249,7 +249,7 @@ table tr.cards th{font-weight:600;color:var(--muted);border-bottom:1px solid var
 .av{width:36px;height:36px;flex:0 0 36px;border-radius:50%;display:grid;place-items:center;font-size:19px;border:2px solid var(--line);line-height:1}
 .av.sm{width:28px;height:28px;flex:0 0 28px;font-size:15px;border-width:2px}
 .av.big{width:84px;height:84px;flex:0 0 84px;font-size:44px;border-width:3px;margin:2px auto 12px}
-.cgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin:6px 0}
+.cgrid{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin:6px 0}
 .cb{height:40px;border-radius:11px;border:3px solid transparent;cursor:pointer;padding:0}
 .cb.on{border-color:#fff}
 .egrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;max-height:236px;overflow:auto;padding:2px;-webkit-overflow-scrolling:touch}
@@ -344,12 +344,17 @@ const BONUS_DEFS = [
   {k:'loot',  pts:20, max:2, i:'bloot', need:'loot'},
   {k:'e8',    pts:5,  max:4, i:'be8',   need:'ext'},
   {k:'e7',    pts:-5, max:4, i:'be7',   need:'ext'},
-  {k:'dj',    pts:20, max:3, i:'bdj',   need:'ext'},
+  {k:'dj',    pts:20, max:3, i:'bdj',   need:'ext', cap:cfg=>1+(cfg.kraken?1:0)+(cfg.whale?1:0)},
   {k:'mate',  pts:30, max:1, i:'bmate', need:'ext'},
   {k:'free',  pts:1,  max:0, i:'bfree', free:true}
 ];
-/* Plafond d'un compteur : un pirate de plus à capturer avec l'extension. */
-function bonusMax(d, cfg){ return (cfg && cfg.ext && d.extMax) ? d.extMax : d.max; }
+/* Plafond d'un compteur selon la configuration : un pirate de plus à capturer
+   avec l'extension, et Davy Jones ne coule que les monstres en jeu (la Raie,
+   plus le Kraken et la Baleine s'ils sont dans le paquet). */
+function bonusMax(d, cfg){
+  if(d.cap) return d.cap(cfg||{});
+  return (cfg && cfg.ext && d.extMax) ? d.extMax : d.max;
+}
 /* Joueurs admis à la table : neuf avec l'extension, huit sinon. */
 function maxPlayers(cfg){ return (cfg && cfg.ext) ? 9 : 8; }
 
@@ -568,7 +573,7 @@ function filterGames(games, f){
 }
 /* ===== Couleurs : lisibilité et distinction ========================== */
 const SURFACE='#16202b';               // fond des cartes, référence de contraste
-const SERIES_HEX=['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767','#2aa4b8'];
+const SERIES_HEX=['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767','#f2c94c'];
 const PICTOS=['☠️','💀','🏴‍☠️','⚓','🚢','⛵','🛶','🗡️','⚔️','🔱','🪝','🧭','🗺️','💰','💎','👑','🪙','🍺','🥃','🍻',
               '🦜','🐙','🦑','🦈','🐋','🐬','🐠','🦀','🦞','🐚','🪸','🏝️','🌴','🥥','🌊','🌀','⛈️','⚡','🔥','🕯️',
               '🔭','⏳','🧿','🎣','⛓️','🦴','👻','🌙','⭐','🧜'];
@@ -950,7 +955,7 @@ en:{
   optLoot:'Loot cards', optLootD:'Alliance: +20 if both allies bid correctly',
   optKraken:'Kraken', optKrakenD:'The trick is destroyed, so tricks may add up to less',
   optWhale:'White Whale', optWhaleD:'Special cards are cancelled',
-  optExt:'Expansion', optExtD:'19 more cards, up to 9 players: 7 and 8 bonuses, Mary Thorne, First Mate, Davy Jones',
+  optExt:'Expansion', optExtD:'19 more cards, up to 9 players: 7 and 8 bonuses, Mary Thorne, First Mate Con, Davy Jones',
   optPirates:'Named pirates', optPiratesD:"Advanced rules: each pirate has a power, including the Rascal's wager",
   optBonusIf:'Bonuses only on a correct bid', optBonusIfD:'Official rule. Uncheck if your group always counts bonuses',
   houseRules:'House rules', addHouse:'+ Add a house card or penalty',
@@ -1001,7 +1006,7 @@ en:{
   be8:'Expansion 8 captured', be8d:'+5 each',
   be7:'Expansion 7 captured', be7d:'−5 each',
   bdj:'Sea monster sunk by Davy Jones', bdjd:'Kraken, Whale or Stingray, +20 each',
-  bmate:'First Mate taken by the Skull King or a mermaid', bmated:'+30',
+  bmate:'First Mate Con taken by the Skull King or a mermaid', bmated:'+30',
   bfree:'Free points', bfreed:'manual adjustment',
   adjOf:n=>'Adjustment for '+n, adjSub:i=>'Round '+i+' · for your one-off cards and house rules',
   openFull:'Open the full bonus sheet',
@@ -1746,7 +1751,7 @@ function startGame(){
   Store.set('sk_lastsel', draft.sel); Store.set('sk_cfg', draft.cfg);
   G = {
     id: uid('g'),
-    players: draft.sel.map((id,i)=>{ const r=roster().find(x=>x.id===id)||{};
+    players: draft.sel.slice(0, maxPlayers(draft.cfg)).map((id,i)=>{ const r=roster().find(x=>x.id===id)||{};
       return {id, name:r.name||('Joueur '+(i+1)), color:r.color||SERIES_HEX[i%SERIES_HEX.length], icon:r.icon||'☠️'}; }),
     cfg: Object.assign({}, draft.cfg),
     rounds: Array.from({length:dealRounds(draft.cfg)},()=>({bids:{},tricks:{},bonus:{},locked:false})),
@@ -1988,12 +1993,13 @@ function renderSetup(){
       if(after) after();};
     opts.appendChild(r);
   };
-  swRow('loot',T.optLoot,T.optLootD);
-  swRow('kraken',T.optKraken,T.optKrakenD);
-  swRow('whale',T.optWhale,T.optWhaleD);
-  /* L'extension change le paquet, donc le plafond de cartes, et le nombre de
-     joueurs admis : l'ecran se redessine, et un neuvieme joueur deja choisi
-     sort de la table si l'option est retiree. */
+  /* Chaque carte ajoutée ou retirée change le paquet, donc le plafond de
+     cartes affiché : l'écran se redessine. L'extension change aussi le nombre
+     de joueurs admis, et un neuvième joueur déjà choisi sort de la table si
+     l'option est retirée. */
+  swRow('loot',T.optLoot,T.optLootD,renderSetup2);
+  swRow('kraken',T.optKraken,T.optKrakenD,renderSetup2);
+  swRow('whale',T.optWhale,T.optWhaleD,renderSetup2);
   swRow('ext',T.optExt,T.optExtD,()=>{ draft.sel=draft.sel.slice(0, maxPlayers(draft.cfg)); renderSetup2(); });
   swRow('pirates',T.optPirates,T.optPiratesD);
   if(draft.cfg.scoring==='classic') swRow('bonusIfExact',T.optBonusIf,T.optBonusIfD);

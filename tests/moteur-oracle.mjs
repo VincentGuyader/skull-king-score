@@ -6,7 +6,9 @@
 
 const PAQUET = { base: 70, loot: 2, kraken: 1, whale: 1, ext: 19 };
 const VALEURS = { c14: 10, b14: 20, mByP: 20, pBySK: 30, skByM: 40, loot: 20, e8: 5, e7: -5, dj: 20, mate: 30 };
-/* Compteurs qui n'existent qu'avec une option de la partie. */
+/* Compteurs qui n'existent qu'avec une option de la partie. Cette regle de
+   gel est partagee avec le moteur, pas contre-verifiee : le temoin ne peut
+   la falsifier, seuls les baremes et les valeurs le sont. */
 const OPTION = { loot: 'loot', e8: 'ext', e7: 'ext', dj: 'ext', mate: 'ext' };
 
 export function paquetOracle(cfg) {

@@ -8,10 +8,7 @@ import { boot, watchErrors, roster, game, round, blank, head, table, cardsRow } 
    et hall of fame, aide-memoire dans les quatre langues, accessibilite, et
    les sauvegardes d'avant l'option. */
 
-/* La neuvieme fiche porte la neuvieme teinte de la palette, comme celle que
-   l'application propose a la creation quand les huit autres sont prises. */
 const NEUF = roster('Anne', 'Bob', 'Cleo', 'Dan', 'Eve', 'Fred', 'Gus', 'Hal', 'Ida');
-NEUF[8].color = '#2aa4b8'; NEUF[8].icon = '🧭';
 const IDS = NEUF.map(p => p.id);
 const LANGUES = ['fr', 'en', 'de', 'es'];
 
@@ -122,6 +119,15 @@ test('une archive d avant l option compte exactement comme avant', async ({ page
   /* Manche 4 : 4 plis annonces et faits = 80, +20 +20 +150 ; manche 8 : 8 plis
      = 160 ; les huit autres manches a zero reussi : 10 x (1+2+3+5+6+7+9+10). */
   expect(total).toBe(80 + 20 + 20 + 150 + 160 + 430);
+});
+
+test('un compteur Butin dans une partie sans Butin ne vaut rien non plus', async ({ page }) => {
+  const g = dixManches(3, { loot: false });
+  delete g.cfg.ext;
+  g.rounds[0].bonus = { j0: { loot: 2, c14: 1 } };
+  await boot(page, { roster: NEUF, archive: [g] });
+  const total = await page.evaluate(() => gameResult(archive()[0]).tot.find(t => t.id === 'j0').total);
+  expect(total, '440 + 330 + 10, sans les 40 du Butin').toBe(780);
 });
 
 test('des compteurs d extension egares dans une partie de base ne valent rien', async ({ page }) => {
