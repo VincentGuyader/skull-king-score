@@ -1588,7 +1588,16 @@ function goBack(){
   if(history.state && history.state.sk) history.back(); else popBack();
 }
 window.addEventListener('popstate', ()=>{ if(backStack.length) popBack(); });
-function goRoot(v,pa){ backStack=[]; view=v; param=pa||null; render(); }
+/* Revenir a la racine, c'est aussi rendre au navigateur les entrees qu'on lui
+   avait confiees : sinon chaque manche validee laisse une entree orpheline,
+   et le bouton precedent tombe dedans sans rien faire. Le nombre a rembobiner
+   vient de l'historique lui-meme, qui survit au rechargement quand la pile en
+   memoire ne le fait pas. */
+function goRoot(v,pa){
+  backStack=[]; view=v; param=pa||null; render();
+  const n = history.state && history.state.sk;
+  if(n){ try{ history.go(-n); }catch(e){} }
+}
 const $ = s=>document.querySelector(s);
 
 /* ===== Répertoire de joueurs et archive des parties =================== */
@@ -2408,7 +2417,7 @@ function renderScores(){
     $('#undoR').onclick=()=>{
       if(!freshTap()) return;
       G.rounds[lastLocked].locked=false; G.cur=lastLocked; G.phase='res';
-      save(); buzz(); goRoot('round');
+      save(); buzz(); go('round');
     };
   };
   if(!done){
@@ -2417,7 +2426,8 @@ function renderScores(){
     const suivante = G.rounds.findIndex(r=>!r.locked);
     btns.appendChild(h(`<button class="btn" id="next">${T.nextRound(suivante+1)}</button>`));
     /* Ouverte depuis les scores, la manche est un ecran empile : le bouton
-       precedent y ramene, comme « Revenir aux scores ». */
+       precedent y ramene. Toute sortie vers les scores repasse par goRoot,
+       qui rembobine l'entree. */
     $('#next').onclick=()=>{ if(!freshTap()) return;
       G.cur=suivante; G.phase='bid'; save(); buzz(14); go('round'); };
     addUndo();
@@ -2462,7 +2472,7 @@ function editRound(ri){
   openSheet(`<h3>${T.editRoundTitle(ri+1)}</h3><div class="small muted" style="margin-bottom:12px">${T.editRoundDesc}</div>
     <button class="btn" id="ed">${T.editRoundBtn}</button><div style="height:8px"></div><button class="btn ghost sm" id="ca">${T.cancel}</button>`);
   $('#ca').onclick=closeSheet;
-  $('#ed').onclick=()=>{ closeSheet(); G.rounds[ri].locked=false; G.cur=ri; G.phase='bid'; save(); goRoot('round'); };
+  $('#ed').onclick=()=>{ closeSheet(); G.rounds[ri].locked=false; G.cur=ri; G.phase='bid'; save(); go('round'); };
 }
 
 /* ---------- Graphique de progression ---------- */
