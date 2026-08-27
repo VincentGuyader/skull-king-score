@@ -11,7 +11,7 @@ assets web sont copies a la demande depuis la racine par `sync-www.mjs`.
 
 ## Pre-requis
 
-- Node 20+ et npm (les workflows utilisent Node 20).
+- Node 22+ et npm (Capacitor 8 l'exige ; les workflows utilisent Node 22).
 - Android : JDK 21, Android SDK avec `platform-tools`, `build-tools;35.0.0`,
   `platforms;android-35` et `platforms;android-36` (Capacitor 8 compile avec
   `compileSdk` 36, l'application cible `targetSdk` 36). Variable
