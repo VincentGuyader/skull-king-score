@@ -74,7 +74,7 @@ jobs:
       - name: Verifier la signature
         working-directory: mobile/android
         # Pas de -strict : la cle d'upload est auto-signee par construction.
-        run: jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tail -1 | grep -q 'jar verified'
+        run: jarsigner -verify app/build/outputs/bundle/release/app-release.aab | grep -q '^jar verified'
 
       - uses: actions/upload-artifact@v4
         with:
