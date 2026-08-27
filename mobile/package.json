@@ -1,0 +1,25 @@
+{
+  "name": "skull-king-score-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Emballage Capacitor (Android / iOS) de Skull King Score. Les assets web viennent de la racine du depot.",
+  "type": "module",
+  "scripts": {
+    "sync": "node sync-www.mjs && npx cap sync",
+    "sync:android": "node sync-www.mjs && npx cap sync android",
+    "sync:ios": "node sync-www.mjs && npx cap sync ios",
+    "android:bundle": "cd android && ./gradlew bundleRelease",
+    "android:apk": "cd android && ./gradlew assembleRelease",
+    "android:open": "npx cap open android",
+    "ios:open": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.0"
+  }
+}
