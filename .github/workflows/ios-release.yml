@@ -30,6 +30,10 @@ jobs:
         with:
           node-version: '20'
 
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Synchroniser les assets web dans le projet iOS
         working-directory: mobile
         run: |
@@ -42,6 +46,7 @@ jobs:
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
         run: |
           test -n "$APPLE_API_KEY_ID" || { echo "secret APPLE_API_KEY_ID absent"; exit 1; }
+          test -n "$APPLE_API_KEY_P8" || { echo "secret APPLE_API_KEY_P8 absent"; exit 1; }
           mkdir -p ~/private_keys
           printf '%s\n' "$APPLE_API_KEY_P8" > ~/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8
           chmod 600 ~/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8
@@ -53,6 +58,7 @@ jobs:
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          set -o pipefail
           xcodebuild -project App.xcodeproj -scheme App -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
@@ -62,7 +68,7 @@ jobs:
             -authenticationKeyIssuerID "$APPLE_API_ISSUER_ID" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            | tee "$RUNNER_TEMP/archive.log" | grep -E "error|warning: .*sign|Archive Succeeded|BUILD" || true
+            | tee "$RUNNER_TEMP/archive.log" | grep -E "error|warning: .*sign|Archive Succeeded|BUILD"
           test -d "$RUNNER_TEMP/App.xcarchive" || { tail -80 "$RUNNER_TEMP/archive.log"; exit 1; }
 
       - name: Exporter et envoyer a App Store Connect
@@ -70,7 +76,8 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          UPLOAD: ${{ inputs.upload == false && 'export' || 'upload' }}
+          # Un tag envoie toujours ; seul le lancement manuel peut demander une construction seule.
+          UPLOAD: ${{ (github.event_name == 'workflow_dispatch' && inputs.upload == false) && 'export' || 'upload' }}
         run: |
           cat > "$RUNNER_TEMP/export.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
@@ -93,7 +100,7 @@ jobs:
             -authenticationKeyIssuerID "$APPLE_API_ISSUER_ID"
 
       - uses: actions/upload-artifact@v4
-        if: inputs.upload == false
+        if: github.event_name == 'workflow_dispatch' && inputs.upload == false
         with:
           name: App-${{ github.run_number }}.ipa
           path: ${{ runner.temp }}/export/*.ipa

@@ -73,7 +73,8 @@ jobs:
 
       - name: Verifier la signature
         working-directory: mobile/android
-        run: jarsigner -verify -strict app/build/outputs/bundle/release/app-release.aab
+        # Pas de -strict : la cle d'upload est auto-signee par construction.
+        run: jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tail -1 | grep -q 'jar verified'
 
       - uses: actions/upload-artifact@v4
         with:
@@ -85,7 +86,7 @@ jobs:
         if: env.PLAY_JSON != ''
         env:
           PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: fr.thinkr.skullkingscore
@@ -98,4 +99,5 @@ jobs:
         if: env.PLAY_JSON == ''
         env:
           PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        run: echo "PLAY_SERVICE_ACCOUNT_JSON absent : AAB construit et signe, non publie (artefact disponible)."
+        run: |
+          echo "PLAY_SERVICE_ACCOUNT_JSON absent, AAB construit et signe mais non publie (artefact disponible)."

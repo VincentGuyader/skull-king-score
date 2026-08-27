@@ -37,7 +37,7 @@ const EXPECT = {
 console.log('== PNG ==');
 const rows = [];
 for (const f of walk(HERE).filter(f => f.endsWith('.png'))) {
-  const s = pngSize(f);
+  const s = pngSize(f) || { w: 0, h: 0, type: -1, depth: 0 };
   const rel = path.relative(HERE, f);
   const key = Object.keys(EXPECT).find(k => rel.includes(k));
   const exp = key && EXPECT[key];
@@ -71,7 +71,10 @@ for (const lang of ['fr', 'en', 'de', 'es']) {
 }
 
 console.log('== Tirets typographiques ==');
-const files = [...walk(HERE).filter(f => /\.(md|html|mjs)$/.test(f)), path.join(ROOT, 'privacy.html')];
+const files = [...walk(HERE).filter(f => /\.(md|html|mjs)$/.test(f)), path.join(ROOT, 'privacy.html'),
+  path.join(ROOT, 'index.html'), path.join(ROOT, 'sw.js'), path.join(ROOT, 'mobile', 'README.md'), path.join(ROOT, 'mobile', 'IOS.md'),
+  path.join(ROOT, 'mobile', 'sync-www.mjs'), path.join(ROOT, '.github', 'workflows', 'android-release.yml'),
+  path.join(ROOT, '.github', 'workflows', 'ios-release.yml')];
 for (const f of files) {
   const t = fs.readFileSync(f, 'utf8');
   const i = t.search(/[\u2013\u2014]/);

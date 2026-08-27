@@ -81,7 +81,7 @@ const SIZES = [
   { key: 'play-phone-1080x1920', w: 360, h: 640, dsf: 3, mobile: true },
   { key: 'appstore-6.7-1290x2796', w: 430, h: 932, dsf: 3, mobile: true },
   { key: 'appstore-6.5-1284x2778', w: 428, h: 926, dsf: 3, mobile: true },
-  { key: 'appstore-ipad-12.9-2048x2732', w: 1024, h: 1366, dsf: 2, mobile: true }
+  /* Pas d'iPad : le projet iOS cible l'iPhone seul. */
 ];
 
 /* Les huit ecrans demandes. `seed` = etat de localStorage, `act` = mise en

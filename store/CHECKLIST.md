@@ -10,7 +10,7 @@ Livrables utilisés ici :
 - Icône App Store 1024x1024 : `store/graphics/appstore-icon-1024.png`
 - Textes : `store/listing/fr.md`, `en.md`, `de.md`, `es.md`
 - Réponses aux questionnaires : `store/listing/questionnaires.md`
-- Politique de confidentialité : https://vincentguyader.github.io/skull-king-score/privacy.html (fichier `privacy.html` à la racine du dépôt, à ajouter au workflow de déploiement, voir plus bas)
+- Politique de confidentialité : https://vincentguyader.github.io/skull-king-score/privacy.html (fichier `privacy.html` à la racine du dépôt, publié par le workflow de déploiement)
 
 Vérification avant tout envoi : `node store/check.mjs` (dimensions des PNG, longueurs des champs, absence de tirets typographiques).
 
@@ -56,7 +56,7 @@ Pour chaque langue (fr-FR par défaut, puis ajouter en-US, de-DE, es-ES via « G
 | Icône de l'application | `store/graphics/play-icon-512.png` (512x512, PNG 32 bits) |
 | Image de présentation (1024x500) | `store/graphics/play-feature-graphic-1024x500.png` |
 | Captures téléphone (2 à 8, 16:9 ou 9:16, 320 à 3840 px) | `store/screenshots/play-phone-1080x1920/<langue>/` : choisir 8 parmi les 10 (recommandé : 01, 02, 03, 04, 04b, 05, 06, 07b) |
-| Captures tablette 7 pouces et 10 pouces | facultatives ; on peut réutiliser `appstore-ipad-12.9-2048x2732` pour les 10 pouces (Play accepte 1080 à 7680 px, ratio 16:9 ou 9:16 ; 2048x2732 est en 3:4, Play l'accepte pour la tablette mais affiche une bordure) |
+| Captures tablette 7 pouces et 10 pouces | facultatives, non fournies (l'application est pensée pour le téléphone) |
 | Vidéo | aucune |
 
 - [ ] Coordonnées (Fiche Play Store > Coordonnées) : e-mail `vincent@thinkr.fr` (obligatoire, affiché publiquement), site https://vincentguyader.github.io/skull-king-score/.
@@ -96,7 +96,7 @@ Toutes les réponses détaillées sont dans `store/listing/questionnaires.md`.
 - [ ] Compte Apple Developer Program (99 USD par an ; en tant qu'organisation : numéro D-U-N-S ; en tant que personne : vérification d'identité).
 - [ ] Certificates, Identifiers & Profiles : créer l'App ID explicite `fr.thinkr.skullkingscore` (le même identifiant que sur Android par commodité), sans capacité particulière (pas de Push, pas d'iCloud, pas de Sign in with Apple).
 - [ ] Xcode : équipe sélectionnée, signature automatique, `Bundle Identifier` identique, `Version` 1.0.0, `Build` 1.
-- [ ] `Info.plist` : `ITSAppUsesNonExemptEncryption` = `NO` ; `UIRequiresFullScreen` selon le besoin ; orientations : portrait (et paysage sur iPad si le rendu convient, sinon portrait seul et cocher « Requires full screen » sur iPad pour éviter le multitâche).
+- [ ] `Info.plist` : `ITSAppUsesNonExemptEncryption` = `NO` ; `UIRequiresFullScreen` selon le besoin ; orientations : portrait seul ; cible iPhone uniquement (`TARGETED_DEVICE_FAMILY` 1).
 - [ ] Icône : `store/graphics/appstore-icon-1024.png` dans l'asset catalog (1024x1024, sans transparence, coins carrés : Apple applique lui-même le masque). Voir la réserve de qualité dans le rapport : c'est un agrandissement du 512 px.
 
 ### 2.2 Fiche App Store Connect
@@ -125,7 +125,7 @@ Pour chaque langue :
 |---|---|
 | Captures iPhone 6,7 pouces (obligatoire, 1290x2796) | `store/screenshots/appstore-6.7-1290x2796/<langue>/` : jusqu'à 10 captures, prendre les 10 ou les 8 recommandées (01, 02, 03, 04, 04b, 05, 06, 07b) |
 | Captures iPhone 6,5 pouces (1284x2778 ou 1242x2688) | `store/screenshots/appstore-6.5-1284x2778/<langue>/` ; depuis 2024 Apple les dérive du 6,7 pouces si on ne les fournit pas, mais les fournir évite le recadrage |
-| Captures iPad 13 pouces (2048x2732, obligatoire si l'app tourne sur iPad) | `store/screenshots/appstore-ipad-12.9-2048x2732/<langue>/` ; si l'app est déclarée iPhone uniquement, ne pas les fournir |
+| Captures iPad | non requises : le build est iPhone uniquement |
 | Texte promotionnel (170) | section « Texte promotionnel App Store » |
 | Description (4000) | section « Description complète » |
 | Mots-clés (100) | section « Mots-clés App Store » |
@@ -133,7 +133,7 @@ Pour chaque langue :
 | URL marketing | https://vincentguyader.github.io/skull-king-score/ |
 | Nouveautés (pas demandé pour une 1.0, sinon) | section « Nouveautés 1.0.0 » |
 
-Point de vigilance 2026 : les tailles exigées dépendent des appareils supportés par le build ; App Store Connect affiche la liste exacte au moment de l'envoi (en 2025-2026 : 6,9 pouces 1320x2868 OU 6,5 pouces 1284x2778 pour l'iPhone, et 13 pouces 2048x2732 pour l'iPad). Si la case 6,9 pouces est réclamée, régénérer avec `capture.mjs` en ajoutant une entrée `{ key: 'appstore-6.9-1320x2868', w: 440, h: 956, dsf: 3 }` dans `SIZES`.
+Point de vigilance 2026 : les tailles exigées dépendent des appareils supportés par le build ; App Store Connect affiche la liste exacte au moment de l'envoi (en 2025-2026 : 6,9 pouces 1320x2868 OU 6,5 pouces 1284x2778 pour l'iPhone). Si la case 6,9 pouces est réclamée, régénérer avec `capture.mjs` en ajoutant une entrée `{ key: 'appstore-6.9-1320x2868', w: 440, h: 956, dsf: 3 }` dans `SIZES`.
 
 - [ ] Build : joindre le build téléversé (voir 2.4).
 - [ ] Informations générales de la version : icône (prise dans le build), version 1.0.0, copyright, classification.
@@ -170,19 +170,7 @@ Skull King Ultimate Score is an unofficial score keeper for the Skull King card 
 
 ## 3. Déploiement de `privacy.html`
 
-Le workflow `.github/workflows/deploy.yml` ne publie que des fichiers listés explicitement (étape « Assembler le site »). Pour que https://vincentguyader.github.io/skull-king-score/privacy.html existe, ajouter `privacy.html` à la commande de copie, c'est-à-dire remplacer :
-
-```
-cp index.html sw.js manifest.webmanifest _site/
-```
-
-par :
-
-```
-cp index.html privacy.html sw.js manifest.webmanifest _site/
-```
-
-Rien d'autre à changer : `sw.js` ne met pas cette page en cache, ce qui est souhaitable pour une page légale.
+Publié par `.github/workflows/deploy.yml` avec le site (étape « Assembler le site ») : https://vincentguyader.github.io/skull-king-score/privacy.html. Le service worker garde chaque page sous sa propre adresse, la politique ne remplace jamais l'application dans le cache hors-ligne.
 
 ## 4. Après publication
 

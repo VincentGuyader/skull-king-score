@@ -2,18 +2,25 @@
 
 Le projet Xcode est genere par `npx cap add ios` (Capacitor 8). Il utilise
 Swift Package Manager (`ios/App/CapApp-SPM`), pas CocoaPods : il n'y a pas de
-`Podfile` et `pod install` n'est pas necessaire. Tout ce qui suit se fait sur
-un Mac ; sous Linux seul le squelette du projet peut etre genere et
-configure.
+`Podfile` et `pod install` n'est pas necessaire.
+
+Deux voies pour archiver et envoyer a App Store Connect :
+
+- sans Mac : le workflow `.github/workflows/ios-release.yml` (runner macOS,
+  signature geree par Apple via la cle API App Store Connect, envoi vers
+  TestFlight), decrit dans `README.md` ; c'est la voie normale ;
+- avec un Mac : la procedure manuelle ci-dessous.
+
+Le schema Xcode `App` est partage (`App.xcodeproj/xcshareddata/xcschemes/`),
+ce que `xcodebuild -scheme App` exige sur une machine sans Xcode ouvert.
 
 ## Etat du projet genere
 
 - Bundle id : `fr.thinkr.skullkingscore` (`PRODUCT_BUNDLE_IDENTIFIER`).
 - Nom affiche : Skull King Ultimate Score (`CFBundleDisplayName`).
 - Version : `MARKETING_VERSION` 1.0.0, `CURRENT_PROJECT_VERSION` 1.
-- Cible de deploiement : iOS 15.0 (defaut Capacitor 8), iPhone et iPad.
-- Orientation : portrait seulement (iPhone) ; portrait et portrait inverse
-  (iPad), `Info.plist`.
+- Cible de deploiement : iOS 15.0 (defaut Capacitor 8), iPhone seul (`TARGETED_DEVICE_FAMILY` 1).
+- Orientation : portrait seulement, `Info.plist`.
 - Barre de statut : `UIStatusBarStyleLightContent`,
   `UIViewControllerBasedStatusBarAppearance` = NO, `UIUserInterfaceStyle`
   = Dark.
@@ -45,7 +52,7 @@ puis relancer `npx capacitor-assets generate --ios ...` (commande dans
 ## Etapes
 
 ```sh
-git clone https://github.com/vincentguyader/skull-king-score
+git clone https://github.com/VincentGuyader/skull-king-score
 cd skull-king-score/mobile
 npm install
 npm run sync:ios          # node sync-www.mjs && npx cap sync ios
@@ -74,8 +81,8 @@ Dans Xcode :
 7. TestFlight : ajouter des testeurs internes (jusqu'a 100, sans review),
    ou externes (review legere).
 8. Pour la publication : onglet App Store, remplir la fiche, captures
-   d'ecran (6.7", 6.5" ou 6.9" iPhone et 13" iPad puisque la cible inclut
-   l'iPad), choisir le build, puis Submit for Review.
+   d'ecran iPhone (6.7" ou 6.9", plus 6.5"), choisir le build, puis Submit
+   for Review.
 
 Test rapide sur simulateur avant l'archive : choisir un simulateur iPhone et
 Product > Run.
@@ -114,6 +121,6 @@ Product > Run.
 
 - Nom d'affichage si l'usage de la marque est refuse.
 - Categorie App Store : Jeux > Cartes, ou Utilitaires.
-- Prise en charge iPad : le projet la garde (`TARGETED_DEVICE_FAMILY`
-  "1,2") ; passer a "1" pour iPhone seul et ne fournir que des captures
-  iPhone.
+- Prise en charge iPad : ecartee (`TARGETED_DEVICE_FAMILY` 1) ; pour la
+  reprendre, passer a "1,2" dans les deux configurations et fournir des
+  captures 13" iPad.

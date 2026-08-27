@@ -8,6 +8,9 @@ android/local.properties
 android/upload-keystore.jks
 android/keystore.properties
 *.jks
+*.p8
+*.p12
+*.mobileprovision
 *.keystore
 keystore.properties
 ios/App/Pods/

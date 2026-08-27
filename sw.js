@@ -27,11 +27,13 @@ self.addEventListener('fetch', e=>{
 
   const isDoc = req.mode === 'navigate' || (req.destination === 'document');
   if(isDoc){
-    // réseau d'abord : une nouvelle version déployée est prise au prochain lancement
+    // réseau d'abord : une nouvelle version déployée est prise au prochain lancement.
+    // Chaque page garde sa propre entrée : la politique de confidentialité ne
+    // remplace pas l'application, qui reste le repli d'une page inconnue.
     e.respondWith(
       fetch(req)
-        .then(res=>{ const copy=res.clone(); caches.open(VERSION).then(c=>c.put('./index.html', copy)); return res; })
-        .catch(()=>caches.match('./index.html').then(r=>r || caches.match('./')))
+        .then(res=>{ const copy=res.clone(); caches.open(VERSION).then(c=>c.put(req, copy)); return res; })
+        .catch(()=>caches.match(req).then(r=>r || caches.match('./index.html')).then(r=>r || caches.match('./')))
     );
     return;
   }

@@ -7,14 +7,14 @@ assets web sont copies a la demande depuis la racine par `sync-www.mjs`.
 
 - Identifiant : `fr.thinkr.skullkingscore`
 - Nom affiche : Skull King Ultimate Score
-- Version : 1.0.0 (Android `versionCode` 1, iOS build 1)
+- Version : 1.0.0 (Android `versionCode` et iOS build = numero de run de l'integration continue ; 1 en local)
 
 ## Pre-requis
 
-- Node 22+ et npm.
+- Node 20+ et npm (les workflows utilisent Node 20).
 - Android : JDK 21, Android SDK avec `platform-tools`, `build-tools;35.0.0`,
   `platforms;android-35` et `platforms;android-36` (Capacitor 8 compile avec
-  `compileSdk` 36, l'application cible `targetSdk` 35). Variable
+  `compileSdk` 36, l'application cible `targetSdk` 36). Variable
   `ANDROID_HOME` pointant sur le SDK, ou un fichier `android/local.properties`
   contenant `sdk.dir=/chemin/vers/Sdk`.
 - iOS : un Mac avec Xcode, voir `IOS.md`.
@@ -123,7 +123,7 @@ jarsigner -verify -verbose android/app/build/outputs/bundle/release/app-release.
 ### Reglages natifs
 
 - `android/variables.gradle` : `minSdkVersion` 24 (defaut Capacitor),
-  `compileSdkVersion` 36, `targetSdkVersion` 35.
+  `compileSdkVersion` 36, `targetSdkVersion` 36.
 - `android/app/src/main/AndroidManifest.xml` : `screenOrientation="portrait"`.
 - `android/app/src/main/res/values/colors.xml` et `styles.xml` : barre de
   statut, barre de navigation, fond de fenetre et ecran de lancement en
@@ -148,18 +148,36 @@ Voir `IOS.md` (Xcode, signature, archive, TestFlight, notes pour la review).
 
 ## Monter de version
 
-A chaque nouvelle soumission :
+Les numeros de build sont fournis par l'integration continue : `versionCode`
+Android et `CURRENT_PROJECT_VERSION` iOS valent le numero de run du workflow
+(`github.run_number`), strictement croissant par construction. En local,
+`VERSION_CODE=42 npm run android:bundle` force la valeur ; sans variable,
+`versionCode` vaut 1.
 
-1. Android, `android/app/build.gradle` : incrementer `versionCode` (entier,
-   strictement croissant, Play refuse un AAB avec un code deja utilise) et
-   mettre a jour `versionName`.
+A chaque version visible par les utilisateurs :
+
+1. Android, `android/app/build.gradle` : `versionName` (ex. `1.0.1`).
 2. iOS, `ios/App/App.xcodeproj/project.pbxproj` (ou Xcode > cible App >
-   General) : `MARKETING_VERSION` (= `CFBundleShortVersionString`, ex.
-   `1.0.1`) et `CURRENT_PROJECT_VERSION` (= `CFBundleVersion`, entier
-   strictement croissant pour un meme `MARKETING_VERSION`). Les deux
-   occurrences (Debug et Release) doivent etre modifiees.
+   General) : `MARKETING_VERSION` (= `CFBundleShortVersionString`), les deux
+   occurrences (Debug et Release).
 3. `mobile/package.json` : champ `version`, pour information.
-4. `npm run sync`, puis reconstruire.
+4. Pousser un tag `vX.Y.Z` : les workflows `android-release.yml` et
+   `ios-release.yml` construisent, signent et envoient (piste interne Play,
+   TestFlight). Ils se lancent aussi a la main depuis l'onglet Actions, avec
+   le choix de la piste Play et du mode construction seule pour iOS.
+
+## Workflows de publication
+
+- `.github/workflows/android-release.yml` (Ubuntu) : `sync:android`, AAB
+  release signe par la cle d'upload lue dans les secrets
+  `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+  `ANDROID_KEY_PASSWORD`, artefact publie, puis envoi sur Google Play si
+  `PLAY_SERVICE_ACCOUNT_JSON` existe (textes de nouveautes dans
+  `store/whatsnew/`).
+- `.github/workflows/ios-release.yml` (macOS) : `sync:ios`, archive signee par
+  Apple (signature cloud avec la cle API App Store Connect : secrets
+  `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, `APPLE_API_KEY_P8`,
+  `APPLE_TEAM_ID`), envoi a App Store Connect, d'ou TestFlight.
 
 ## Points d'attention avant soumission
 
@@ -167,9 +185,10 @@ A chaque nouvelle soumission :
   Games, Schmidt Spiele en Europe). Les deux boutiques peuvent demander une
   autorisation ou refuser le nom ; ce dossier ne renomme rien, la decision
   revient a l'editeur de l'application.
-- Google Play exige pour les nouvelles applications un `targetSdk` recent
-  (35 en 2025, 36 attendu a partir de fin aout 2026). Si la console refuse
-  l'AAB, passer `targetSdkVersion = 36` dans `android/variables.gradle` et
-  reconstruire.
+- Google Play exige `targetSdk` 36 pour les nouvelles applications a partir
+  de fin aout 2026 : c'est la valeur de `android/variables.gradle`.
+- Android 16 ignore `screenOrientation` sur les ecrans de 600 dp et plus
+  (tablettes, pliables ouverts) : l'application peut y etre affichee en
+  paysage, la mise en page reste une colonne centree.
 - Formulaire "Securite des donnees" Play et "App Privacy" App Store : aucune
   collecte, aucun tracking, aucun compte, aucune connexion reseau.
