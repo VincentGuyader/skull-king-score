@@ -288,7 +288,11 @@ tfoot td{font-weight:800;background:var(--surface-2)}
 .kv{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14.5px}
 .kv:last-child{border-bottom:0}
 .kv>span{min-width:0;overflow-wrap:anywhere}
-.kv span:last-child{font-weight:700;font-variant-numeric:tabular-nums;margin-left:auto;text-align:right}
+/* Le nom prend la place et se replie sur lui-même ; la valeur garde sa
+   largeur et reste sur la ligne du nom tant qu'elle y tient. */
+.kv>span:first-child{flex:1 1 0}
+.kv span:last-child{font-weight:700;font-variant-numeric:tabular-nums;margin-left:auto;text-align:right;flex:0 1 auto}
+.kv>span:only-child{font-weight:400;font-variant-numeric:normal;text-align:left;margin-left:0}
 .seg{display:flex;gap:6px;background:var(--surface-2);padding:4px;border-radius:12px}
 .seg button{flex:1;min-height:40px;border:0;background:transparent;color:var(--ink-2);border-radius:9px;font-weight:600;font-size:14px;cursor:pointer}
 .seg button.on{background:var(--gold);color:#1a1206}
@@ -2648,6 +2652,8 @@ function renderHelp(){
   $('#hSub').textContent=T.helpSub;
   const cfg = G? G.cfg : (draft?draft.cfg:DEFAULT_CFG);
   const kv=(k,v)=>`<div class="kv"><span>${k}</span><span>${v}</span></div>`;
+  /* Une carte et sa règle : la description sous le nom, comme les pirates. */
+  const kd=(k,d)=>`<div class="kv"><span>${k}<br><small class="muted">${d}</small></span></div>`;
   const line=(n,t,d)=>`<div><b>${n}</b><span><b style="color:#fff">${t}</b> : ${d}</span></div>`;
   const scoring = cfg.scoring==='rascal'
     ? kv(T.sHit, T.sHitV(cfg.rascal==='cannonball'?15:10))
@@ -2661,15 +2667,15 @@ function renderHelp(){
       ${line(4,T.hTrump,T.hTrumpD)}${line(5,T.hSuit,T.hSuitD)}${line(6,T.hEscape,T.hEscapeD)}
     </div>
     <div class="card tight" style="margin-top:10px">
-      ${kv(T.hTrio,T.hTrioD)}${kv(T.hTigress,T.hTigressD)}
-      ${cfg.kraken?kv(T.hKraken,T.hKrakenD):''}
-      ${cfg.whale?kv(T.hWhale,T.hWhaleD):''}
-      ${cfg.kraken&&cfg.whale?kv(T.hKvW,T.hKvWD):''}
+      ${kd(T.hTrio,T.hTrioD)}${kd(T.hTigress,T.hTigressD)}
+      ${cfg.kraken?kd(T.hKraken,T.hKrakenD):''}
+      ${cfg.whale?kd(T.hWhale,T.hWhaleD):''}
+      ${cfg.kraken&&cfg.whale?kd(T.hKvW,T.hKvWD):''}
     </div>
     ${cfg.ext?`<h2>${T.hExtTitle}</h2><div class="card tight">
-      ${kv(T.hExtMate,T.hExtMateD)}${kv(T.hExt15,T.hExt15D)}${kv(T.hExt014,T.hExt014D)}${kv(T.hExt78,T.hExt78D)}
-      ${kv(T.hExtPlank,T.hExtPlankD)}${kv(T.hExtRay,T.hExtRayD)}${kv(T.hExtVolley,T.hExtVolleyD)}${kv(T.hExtDJ,T.hExtDJD)}
-      ${kv(T.hExtMulti,T.hExtMultiD)}${kv(T.hExtTwo,T.hExtTwoD)}
+      ${kd(T.hExtMate,T.hExtMateD)}${kd(T.hExt15,T.hExt15D)}${kd(T.hExt014,T.hExt014D)}${kd(T.hExt78,T.hExt78D)}
+      ${kd(T.hExtPlank,T.hExtPlankD)}${kd(T.hExtRay,T.hExtRayD)}${kd(T.hExtVolley,T.hExtVolleyD)}${kd(T.hExtDJ,T.hExtDJD)}
+      ${kd(T.hExtMulti,T.hExtMultiD)}${kd(T.hExtTwo,T.hExtTwoD)}
     </div>`:''}
     <h2>${T.scaleOf(cfg.scoring==='rascal'?T.scaleRascal:T.scaleClassic)}</h2>
     <div class="card tight">${scoring}</div>

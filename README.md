@@ -55,6 +55,8 @@ utilisateur, sous l'origine du site. Conséquences à connaître :
 | `sw.js` | service worker : hors-ligne et mises à jour |
 | `icons/` | icônes d'installation |
 | `.github/workflows/deploy.yml` | publication automatique sur GitHub Pages |
+| `.github/workflows/tests.yml` | recette Playwright sur les trois moteurs à chaque PR |
+| `tests/` | recette Playwright, moteur de score sous Node, harnais de couverture |
 
 ## Développement
 
@@ -63,6 +65,13 @@ est ignoré en protocole `file:`, le reste fonctionne à l'identique.
 
 Le moteur de score est isolé entre les marqueurs `/*ENGINE_START*/` et `/*ENGINE_END*/` et ne dépend
 d'aucune API du navigateur, ce qui permet de le tester sous Node en extrayant simplement ce bloc.
+
+## Recette
+
+`npm test` lance la recette Playwright sur Chromium, Firefox et WebKit (`npm run serve` sert l'application
+seule sur http://127.0.0.1:8123/). `npm run coverage` rejoue la recette Chromium contre une copie de
+`index.html` instrumentée par istanbul et écrit les rapports dans `coverage/` (résumé dans le terminal,
+détail ligne par ligne dans `coverage/index.html`).
 
 ## Langues
 
