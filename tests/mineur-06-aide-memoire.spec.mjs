@@ -49,11 +49,14 @@ test('les valeurs de bareme restent alignees a droite sur large ecran', async ({
   await page.setViewportSize({ width: 412, height: 900 });
   await boot(page, { roster: [ANNE, BOB], game: partieAvecTout(), lang: 'fr' });
   await page.evaluate(() => go('help'));
-  const surUneLigne = await page.evaluate(() => {
-    const kv = document.querySelector('#app .kv');
-    return getComputedStyle(kv).flexDirection === 'row';
+  /* Une vraie ligne de bareme : deux colonnes, la valeur collee au bord droit. */
+  const mesure = await page.evaluate(() => {
+    const kv = [...document.querySelectorAll('#app .kv')].find(k => k.children.length === 2);
+    const [nom, val] = kv.children;
+    const boite = kv.getBoundingClientRect(), v = val.getBoundingClientRect(), n = nom.getBoundingClientRect();
+    return { memeLigne: Math.abs(v.top - n.top) < 4, bordDroit: Math.abs(boite.right - v.right) < 1 };
   });
-  expect(surUneLigne, 'la lecture en deux colonnes est conservee').toBe(true);
+  expect(mesure, 'la lecture en deux colonnes est conservee').toEqual({ memeLigne: true, bordDroit: true });
 });
 
 test('l aide-memoire ne leve aucune erreur', async ({ page }) => {

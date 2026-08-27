@@ -13,9 +13,9 @@
     "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.56.1",
     "fast-check": "^4.9.0",
-    "istanbul-lib-coverage": "3.2.2",
-    "istanbul-lib-instrument": "6.0.3",
-    "istanbul-lib-report": "3.0.1",
-    "istanbul-reports": "3.2.0"
+    "istanbul-lib-coverage": "^3.2.2",
+    "istanbul-lib-instrument": "^6.0.3",
+    "istanbul-lib-report": "^3.0.1",
+    "istanbul-reports": "^3.2.0"
   }
 }

@@ -14,7 +14,9 @@ export default defineConfig({
   webServer: {
     command: 'node tests/server.mjs',
     url: 'http://127.0.0.1:8123/',
-    reuseExistingServer: !process.env.CI,
+    /* COV_OUT : la recette tourne contre le serveur instrumente de
+       tests/coverage.mjs, a reutiliser meme sous CI. */
+    reuseExistingServer: !process.env.CI || !!process.env.COV_OUT,
     stdout: 'ignore'
   },
   use: {

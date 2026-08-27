@@ -3,10 +3,10 @@ import { boot, player, game, blank } from './helpers.mjs';
 
 /* Dans l'aide-memoire, une ligne cle-valeur porte a droite une valeur
    courte : un bareme, un bonus, ou l'etiquette « info » / « compte » d'un
-   pirate. Quand la partie gauche est longue (Rosie, Mary Thorne, le Rascal
-   sur un ecran etroit), l'etiquette tombait sous le texte, comme une ligne
-   de plus. Et la section Extension mettait ses descriptions entieres dans la
-   colonne des valeurs, en gras et alignees a droite. */
+   pirate. Elle reste sur la ligne du nom, meme quand le nom ou sa
+   description est long (Rosie, Mary Thorne, le Rascal sur un ecran etroit).
+   Une regle qui tient en une phrase (monstres marins, cartes de l'extension)
+   se lit sous son nom, en maigre, sur une seule colonne. */
 
 const ANNE = player('jA', 'Anne', { color: '#3987e5', icon: '☠️' });
 const BOB = player('jB', 'Bob', { color: '#d95926', icon: '💀' });
@@ -35,17 +35,29 @@ for (const lang of ['fr', 'en', 'de', 'es']) {
   }
 }
 
-test('la section Extension decrit chaque carte sous son nom, pas dans la colonne des valeurs', async ({ page }) => {
-  await boot(page, { roster: [ANNE, BOB], game: partie(), lang: 'fr' });
-  await page.evaluate(() => go('help'));
-  const section = page.locator('#app h2').filter({ hasText: 'Extension' }).locator('xpath=following-sibling::div[1]');
-  const lignes = await section.locator('.kv').evaluateAll(l => l.map(kv => ({
-    spans: kv.children.length,
-    gras: getComputedStyle(kv.querySelector('small') || kv).fontWeight
-  })));
-  expect(lignes.length, 'dix cartes ou regles').toBe(10);
-  for (const l of lignes) {
-    expect(l.spans, 'une seule colonne').toBe(1);
-    expect(Number(l.gras), 'description en maigre').toBeLessThan(600);
-  }
-});
+/* Les cartes se reperent par leur titre ou leur voisinage : la fonction de
+   reperage voyage vers la page sous forme de texte. */
+const CARTES = {
+  'la section Extension': [10, "[...document.querySelectorAll('#app h2')].find(h => h.textContent.includes('Extension')).nextElementSibling"],
+  'la carte des monstres': [5, "document.querySelector('#app .hier + div')"]
+};
+for (const [nom, [attendu, cible]] of Object.entries(CARTES)) {
+  test(`${nom} decrit chaque regle sous son nom, sur une seule colonne`, async ({ page }) => {
+    await boot(page, { roster: [ANNE, BOB], game: partie(), lang: 'fr' });
+    await page.evaluate(() => go('help'));
+    const lignes = await page.evaluate(cible => {
+      const carte = new Function('return ' + cible)();
+      return [...carte.querySelectorAll('.kv')].map(kv => ({
+        spans: kv.children.length,
+        gras: getComputedStyle(kv.querySelector('small') || kv).fontWeight,
+        chiffres: getComputedStyle(kv.firstElementChild).fontVariantNumeric
+      }));
+    }, cible);
+    expect(lignes.length, 'toutes les lignes').toBe(attendu);
+    for (const l of lignes) {
+      expect(l.spans, 'une seule colonne').toBe(1);
+      expect(Number(l.gras), 'description en maigre').toBeLessThan(600);
+      expect(l.chiffres, 'pas de chiffres tabulaires sur un nom').toBe('normal');
+    }
+  });
+}

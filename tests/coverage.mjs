@@ -4,7 +4,9 @@
    pas le navigateur.
 
    Le serveur ordinaire de la recette ne doit pas tourner sur le meme port,
-   sinon Playwright le reutiliserait et mesurerait une page non instrumentee. */
+   sinon Playwright le reutiliserait et mesurerait une page non instrumentee.
+   La variable COV_OUT, transmise a la recette, dit a playwright.config.mjs
+   de reutiliser le serveur instrumente meme sous CI. */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -23,26 +25,35 @@ async function attendre(url, essais = 40) {
   throw new Error('le serveur de couverture ne repond pas sur ' + url);
 }
 
-try {
-  const r = await fetch(URL);
-  if (r.ok) throw new Error(`un serveur tourne deja sur ${URL} : arretez-le avant de mesurer la couverture`);
-} catch (e) {
+let occupe = false;
+try { occupe = (await fetch(URL)).ok; } catch (e) {
   if (!(e.cause && e.cause.code === 'ECONNREFUSED')) throw e;
+}
+if (occupe) {
+  console.error(`un serveur tourne deja sur ${URL} : arretez-le avant de mesurer la couverture`);
+  process.exit(1);
 }
 
 fs.rmSync(OUT, { recursive: true, force: true });
 const serveur = spawn(process.execPath, [path.join(RACINE, 'tests', 'coverage-server.mjs')],
   { env: { ...process.env, PORT: String(PORT), COV_OUT: OUT }, stdio: ['ignore', 'inherit', 'inherit'] });
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => { serveur.kill(); process.exit(1); });
+}
 try {
   await attendre(URL);
-  const recette = spawnSync('npx', ['playwright', 'test', '--project=chromium', ...process.argv.slice(2)],
-    { cwd: RACINE, stdio: 'inherit', shell: process.platform === 'win32' });
+  /* La recette est lancee par le binaire de Playwright, sans passer par npx
+     ni par un shell : les arguments arrivent tels quels sur tout systeme. */
+  const playwright = path.join(RACINE, 'node_modules', '@playwright', 'test', 'cli.js');
+  const recette = spawnSync(process.execPath, [playwright, 'test', '--project=chromium', ...process.argv.slice(2)],
+    { cwd: RACINE, stdio: 'inherit', env: { ...process.env, COV_OUT: OUT } });
+  if (recette.error) throw recette.error;
   /* Les derniers envois partent a la fermeture des pages. */
   await new Promise(r => setTimeout(r, 1500));
   const rapport = await (await fetch(URL + '__report')).text();
   console.log('\nCouverture de index.html (recette Chromium)\n' + rapport);
   console.log('rapport detaille : ' + path.join(OUT, 'index.html'));
-  process.exitCode = recette.status || 0;
+  process.exitCode = recette.status ?? 1;
 } finally {
   serveur.kill();
 }
