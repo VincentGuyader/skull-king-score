@@ -1,0 +1,15 @@
+{
+  "appId": "fr.thinkr.skullkingscore",
+  "appName": "Skull King Ultimate Score",
+  "webDir": "www",
+  "backgroundColor": "#0d151d",
+  "appendUserAgent": "SkullKingScoreApp",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0d151d"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#0d151d"
+  }
+}

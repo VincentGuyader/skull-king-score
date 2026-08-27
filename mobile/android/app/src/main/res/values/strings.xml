@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Skull King Ultimate Score</string>
+    <string name="title_activity_main">Skull King Ultimate Score</string>
+    <string name="package_name">fr.thinkr.skullkingscore</string>
+    <string name="custom_url_scheme">fr.thinkr.skullkingscore</string>
+</resources>
