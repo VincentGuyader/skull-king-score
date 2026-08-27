@@ -11,3 +11,6 @@ _site/
 
 # debris windows
 bash.exe.stackdump
+
+# couverture
+coverage/
