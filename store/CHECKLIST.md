@@ -1,10 +1,10 @@
 # Publication de Skull King Ultimate Score : pas à pas
 
-Ce document liste, dans l'ordre, les étapes de mise en ligne sur Google Play et sur l'App Store, avec les champs préremplis à partir des fichiers de `store/listing/`. Il suppose que l'enveloppe native (Android : Trusted Web Activity ou WebView ; iOS : WKWebView / Capacitor) est déjà construite depuis le dossier `mobile/`, et que l'application web est publiée sur https://vincentguyader.github.io/skull-king-score/.
+Ce document liste, dans l'ordre, les étapes de mise en ligne sur Google Play et sur l'App Store, avec les champs préremplis à partir des fichiers de `store/listing/`. Les deux applications natives sont des enveloppes Capacitor construites depuis le dossier `mobile/` (voir `mobile/README.md`) par les workflows `android-release.yml` et `ios-release.yml`. Les fichiers web sont embarqués dans l'application : rien n'est chargé depuis https://vincentguyader.github.io/skull-king-score/, qui ne sert qu'à héberger la politique de confidentialité et le site.
 
 Livrables utilisés ici :
 
-- Captures : `store/screenshots/<taille>/<langue>/*.png`
+- Captures : `store/screenshots/<taille>/<langue>/*.png`, non versionnées (`store/.gitignore`), à régénérer avant l'envoi : `PORT=8125 npm run serve` dans un terminal, puis `node store/screenshots/capture.mjs` dans un autre (Chromium de Playwright requis : `npx playwright install chromium`). Le script produit le français et l'anglais ; pour l'allemand et l'espagnol, les boutiques reprennent les captures de la langue par défaut.
 - Icône Play 512x512 : `store/graphics/play-icon-512.png`
 - Bannière Play 1024x500 : `store/graphics/play-feature-graphic-1024x500.png`
 - Icône App Store 1024x1024 : `store/graphics/appstore-icon-1024.png`
@@ -12,12 +12,12 @@ Livrables utilisés ici :
 - Réponses aux questionnaires : `store/listing/questionnaires.md`
 - Politique de confidentialité : https://vincentguyader.github.io/skull-king-score/privacy.html (fichier `privacy.html` à la racine du dépôt, publié par le workflow de déploiement)
 
-Vérification avant tout envoi : `node store/check.mjs` (dimensions des PNG, longueurs des champs, absence de tirets typographiques).
+Vérification avant tout envoi : `node store/check.mjs` (dimensions des PNG de `store/graphics/`, longueurs des champs, absence de tirets typographiques). Les captures n'y sont pas contrôlées : `capture.mjs` signale lui-même les erreurs JavaScript et les débordements horizontaux.
 
 ## 0. Préalables communs
 
 - [ ] Identifiant d'application unique et définitif, identique sur les deux boutiques : `fr.thinkr.skullkingscore` (déjà fixé dans `mobile/capacitor.config.json`, le Gradle et le projet Xcode ; impossible à changer après la première publication).
-- [ ] Version 1.0.0, code de version 1 (Android `versionCode`, iOS `CFBundleVersion`).
+- [ ] Version 1.0.0 (Android `versionName`, iOS `MARKETING_VERSION`). Le numéro de build (Android `versionCode`, iOS `CURRENT_PROJECT_VERSION`) vaut le numéro de run du workflow, strictement croissant : ne pas le fixer à la main.
 - [ ] Nom affiché sous l'icône : « Skull King » (court) ou « SK Ultimate Score » ; le nom complet « Skull King Ultimate Score » sert de titre de fiche.
 - [ ] `privacy.html` déployé et accessible (tester l'URL dans un navigateur privé).
 - [ ] Faire un test réel sur au moins un téléphone Android et un iPhone : hors-ligne, sauvegarde et restauration du fichier, partage du résultat, rotation.
@@ -28,15 +28,16 @@ Vérification avant tout envoi : `node store/check.mjs` (dimensions des PNG, lon
 ### 1.1 Compte et application
 
 - [ ] Compte développeur Google Play (frais uniques de 25 USD ; compte personnel : vérification d'identité et, depuis 2024, test fermé obligatoire avec au moins 12 testeurs pendant 14 jours avant de pouvoir demander l'accès à la production ; compte organisation : numéro D-U-N-S non requis sur Play mais vérification de l'organisation).
-- [ ] « Créer une application » : nom `Skull King Ultimate Score`, langue par défaut « Français (France) », type « Application » (le choix « Jeu » est possible mais impose les catégories de jeux ; choisir « Application » puis la catégorie « Jeux > Cartes » n'est pas offert, voir 1.5), gratuite.
+- [ ] « Créer une application » : nom `Skull King Ultimate Score`, langue par défaut « Français (France) », type « Jeu » (pour accéder à la catégorie « Cartes », voir 1.5), gratuite.
 - [ ] Accepter les déclarations (règles du programme pour les développeurs, lois sur l'exportation des États-Unis).
 
 ### 1.2 Signature et AAB
 
-- [ ] Générer une clé d'upload (keystore) et la conserver hors du dépôt ; noter mot de passe et alias dans le gestionnaire de mots de passe.
-- [ ] Activer **Play App Signing** (proposé lors du premier upload) : Google garde la clé de signature de l'application, vous ne gardez que la clé d'upload. Choisir « Laisser Google gérer la clé ».
-- [ ] Construire un **Android App Bundle** (`.aab`) signé avec la clé d'upload, `targetSdkVersion` au niveau exigé pour l'année en cours (API 35 ou plus en 2026).
-- [ ] Pour une Trusted Web Activity : publier `/.well-known/assetlinks.json` sur le site avec l'empreinte SHA-256 de la **clé de signature Play** (visible dans Play Console > Configuration > Intégrité de l'application), sinon la barre d'adresse reste visible.
+- [ ] Clé d'upload : `upload-keystore.jks` (alias `upload`) et son `keystore.properties`, hors du dépôt. Vérifier qu'une copie existe dans un coffre : les secrets GitHub `ANDROID_KEYSTORE_*` ne se relisent pas, ils ne servent pas de sauvegarde.
+- [ ] Construire l'**Android App Bundle** : lancer le workflow « Android (Google Play) » depuis l'onglet Actions (ou pousser un tag `vX.Y.Z`). Sans le secret `PLAY_SERVICE_ACCOUNT_JSON`, il s'arrête après la construction et publie l'AAB signé en artefact, conservé 30 jours. `targetSdk` 36, exigé pour les nouvelles applications depuis fin août 2026 (`mobile/android/variables.gradle`).
+- [ ] **Premier envoi à la main** : l'API Google Play refuse de publier sur une application qui n'a encore reçu aucun build. Télécharger l'artefact et l'envoyer depuis la Console (Tests internes > Créer une version).
+- [ ] Activer **Play App Signing** (proposé lors du premier envoi) : choisir « Laisser Google gérer la clé ». Google signe l'application avec sa propre clé, vous ne gardez que la clé d'upload.
+- [ ] Automatiser les envois suivants : créer un compte de service dans Google Cloud, l'inviter dans Play Console > Utilisateurs et autorisations avec le droit de publier sur cette application, puis enregistrer sa clé JSON dans le secret `PLAY_SERVICE_ACCOUNT_JSON`. Le workflow envoie alors l'AAB sur la piste choisie (interne par défaut, en brouillon), avec les notes de `store/whatsnew/`.
 
 ### 1.3 Tests
 
