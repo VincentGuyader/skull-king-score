@@ -52,6 +52,19 @@ jour de l'application. Sur iOS (`capacitor://localhost`), le test
 `location.protocol.indexOf('http') === 0` de la page l'aurait de toute facon
 ignore. Le retirer donne un comportement identique sur les deux plateformes.
 
+## Plugins natifs
+
+Le WebView d'Android n'offre ni `navigator.share` ni telechargement par lien.
+`@capacitor/share` et `@capacitor/filesystem` prennent le relais : la page les
+trouve sous `window.Capacitor.Plugins` (constante `NATIVE` de `index.html`)
+pour le partage du resultat et l'export de la sauvegarde, ecrite dans le cache
+de l'application puis proposee par la feuille de partage. Sur le web, `NATIVE`
+est nul et rien ne change.
+
+Sous Windows, `npx cap sync ios` ecrit des antislashs dans
+`ios/App/CapApp-SPM/Package.swift` : les remplacer par des `/` avant de
+committer (le workflow iOS le regenere de toute facon sur macOS).
+
 ## Origine du WebView et persistance des donnees
 
 L'application stocke tout dans `localStorage` (parties, hall of fame,

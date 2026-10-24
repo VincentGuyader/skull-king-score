@@ -53,8 +53,8 @@ test('la fin de partie annonce une egalite au lieu d un vainqueur', async ({ pag
 test('le texte de partage marque les rangs partages', async ({ page }) => {
   await boot(page, { roster: [ANNE, BOB], game: EGALITE });
   const txt = await page.evaluate(() => shareText());
-  const rangs = txt.split('\n').filter(l => /\d\./.test(l)).map(l => l.trim().slice(0, 2));
-  expect(rangs, 'aucun des deux n est classe deuxieme').toEqual(['1.', '1.']);
+  const rangs = txt.split('\n').map(l => (l.match(/^(🥇|🥈|🥉|\d+\.) /) || [])[1]).filter(Boolean);
+  expect(rangs, 'aucun des deux n est classe deuxieme').toEqual(['🥇', '🥇']);
 });
 
 test('une partie sans egalite garde son vainqueur et ses rangs', async ({ page }) => {
