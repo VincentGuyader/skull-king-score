@@ -44,7 +44,9 @@ header .sub{font-size:12.5px;color:var(--muted);margin-top:1px;white-space:nowra
   background:var(--surface);color:var(--ink-2);display:grid;place-items:center;font-size:17px;cursor:pointer;
 }
 .iconbtn:active{background:var(--surface-2)}
-main{flex:1;padding:0 14px 140px}
+/* --barh suit la hauteur reelle de la barre du bas (voir watchBar) : en fin
+   de partie elle porte quatre lignes et depasse largement 140px. */
+main{flex:1;padding:0 14px calc(var(--barh,128px) + 12px)}
 /* ---------- generic ---------- */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
 .card.tight{padding:10px 12px}
@@ -2619,11 +2621,14 @@ function drawChart(node, st, game){
     lab.push({name:s.p.name, y:ly-9});
   });
   if(few){ // anti-collision : on écarte les étiquettes qui se chevauchent
+    /* Le plancher haut s'applique avant l'ecartement : applique apres, il
+       ramenait sur la meme ligne les ex aequo en tete de courbe. */
+    lab.forEach(l=>{ l.y=Math.max(mT+9,l.y); });
     lab.sort((a,b)=>a.y-b.y);
     for(let i=1;i<lab.length;i++) if(lab[i].y-lab[i-1].y<14) lab[i].y=lab[i-1].y+14;
     const over=lab.length?lab[lab.length-1].y-(H-mB-2):0;
     if(over>0) lab.forEach(l=>l.y-=over);
-    lab.forEach(l=>{ labels+=`<text x="${(X(n)-9).toFixed(1)}" y="${Math.max(mT+9,l.y).toFixed(1)}" fill="#c3c2b7" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#16202b" stroke-width="3">${esc(l.name)}</text>`; });
+    lab.forEach(l=>{ labels+=`<text x="${(X(n)-9).toFixed(1)}" y="${l.y.toFixed(1)}" fill="#c3c2b7" font-size="11" font-weight="600" text-anchor="end" paint-order="stroke" stroke="#16202b" stroke-width="3">${esc(l.name)}</text>`; });
   }
   ends+=labels;
   node.style.position='relative';
@@ -2640,11 +2645,15 @@ function drawChart(node, st, game){
     tip.innerHTML=`<b>${i?T.chartAfter(nums[i-1]):T.chartStart}</b><br>`+rows.map(r=>`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.c};margin-right:5px"></span>${esc(r.n)} <b style="float:right;margin-left:12px">${r.v}</b>`).join('<br>');
     tip.style.opacity='1';
     tip.style.left = (X(i)/W*100 > 55 ? '8px' : 'auto'); tip.style.right = (X(i)/W*100 > 55 ? 'auto' : '8px');
-    if(e.cancelable) e.preventDefault();
-  };
+    };
   const off=()=>{cross.setAttribute('opacity','0'); tip.style.opacity='0'};
-  svg.addEventListener('touchstart',move,{passive:false});
-  svg.addEventListener('touchmove',move,{passive:false});
+  /* touch-action:pan-y laisse le glissement vertical au navigateur : la
+     courbe occupe une bonne part de l'ecran des scores, elle ne doit pas
+     empecher de defiler jusqu'au tableau. Le glissement horizontal reste a
+     l'infobulle. */
+  svg.style.touchAction='pan-y';
+  svg.addEventListener('touchstart',move,{passive:true});
+  svg.addEventListener('touchmove',move,{passive:true});
   svg.addEventListener('touchend',off);
   svg.addEventListener('mousemove',move);
   svg.addEventListener('mouseleave',off);
@@ -3273,6 +3282,18 @@ window.addEventListener('resize',()=>{
     if(node) try{ drawChart(node, standings(G), G); }catch(e){}
   }, 120);
 });
+
+/* La barre du bas est fixe et sa hauteur depend de l'ecran (un ou quatre
+   rangs de boutons, message, encoche) : le contenu reserve en dessous de lui
+   exactement cette hauteur, pour que sa fin puisse toujours en sortir. */
+function watchBar(){
+  const bar=$('#bar');
+  const apply=()=>document.documentElement.style.setProperty('--barh', bar.offsetHeight+'px');
+  apply();
+  if('ResizeObserver' in window) new ResizeObserver(apply).observe(bar);
+  else window.addEventListener('resize', apply);
+}
+watchBar();
 
 setLang(detectLang());
 askPersist();
