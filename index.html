@@ -816,6 +816,8 @@ fr:{
   progression:'Progression', perRound:'Détail par manche',
   tapRound:'Touchez un numéro de manche pour la corriger.',
   nextRound:n=>'Manche '+n+' →', shareResult:'Partager le résultat',
+  shareGame:d=>'Partie du '+d, shareRounds:n=>n+' manches', sharePts:'pts',
+  shareBest:(n,p,r)=>'Meilleure manche : '+n+', '+p+' en '+r, shareBy:'Compté avec Skull King Ultimate Score',
   winner:(n,p)=>'🏆 '+n+' l’emporte avec '+p+' points',
   tieWinner:(l,p)=>'🏆 Égalité : '+l.join(' et ')+', '+p+' points chacun',
   chartLater:'La courbe apparaîtra après la première manche.',
@@ -1045,6 +1047,8 @@ en:{
   progression:'Progress', perRound:'Round by round',
   tapRound:'Tap a round number to correct it.',
   nextRound:n=>'Round '+n+' →', shareResult:'Share the result',
+  shareGame:d=>'Game on '+d, shareRounds:n=>n+' rounds', sharePts:'pts',
+  shareBest:(n,p,r)=>'Best round: '+n+', '+p+' in '+r, shareBy:'Scored with Skull King Ultimate Score',
   winner:(n,p)=>'🏆 '+n+' wins with '+p+' points',
   tieWinner:(l,p)=>'🏆 Tie: '+l.join(' and ')+', '+p+' points each',
   chartLater:'The chart appears after the first round.',
@@ -1265,6 +1269,8 @@ de:{
   progression:'Verlauf', perRound:'Nach Durchgang',
   tapRound:'Tippe auf eine Durchgangsnummer, um sie zu korrigieren.',
   nextRound:n=>'Durchgang '+n+' →', shareResult:'Ergebnis teilen',
+  shareGame:d=>'Partie vom '+d, shareRounds:n=>n+' Durchgänge', sharePts:'Pkt.',
+  shareBest:(n,p,r)=>'Bester Durchgang: '+n+', '+p+' in '+r, shareBy:'Gezählt mit Skull King Ultimate Score',
   winner:(n,p)=>'🏆 '+n+' gewinnt mit '+p+' Punkten',
   tieWinner:(l,p)=>'🏆 Gleichstand: '+l.join(' und ')+', je '+p+' Punkte',
   chartLater:'Die Kurve erscheint nach dem ersten Durchgang.',
@@ -1485,6 +1491,8 @@ es:{
   progression:'Evolución', perRound:'Detalle por ronda',
   tapRound:'Toca el número de una ronda para corregirla.',
   nextRound:n=>'Ronda '+n+' →', shareResult:'Compartir el resultado',
+  shareGame:d=>'Partida del '+d, shareRounds:n=>n+' rondas', sharePts:'pts',
+  shareBest:(n,p,r)=>'Mejor ronda: '+n+', '+p+' en '+r, shareBy:'Contado con Skull King Ultimate Score',
   winner:(n,p)=>'🏆 '+n+' gana con '+p+' puntos',
   tieWinner:(l,p)=>'🏆 Empate: '+l.join(' y ')+', '+p+' puntos cada uno',
   chartLater:'La curva aparece tras la primera ronda.',
@@ -3230,6 +3238,14 @@ function doExport(){
     toast(T.exported);
     if(view==='hof') render();
   };
+  if(NATIVE && NATIVE.Filesystem){
+    /* Le fichier passe par le cache de l'application, d'ou la feuille de
+       partage native le propose a Fichiers, Drive, un e-mail... */
+    NATIVE.Filesystem.writeFile({path:name, data:txt, directory:'CACHE', encoding:'utf8'})
+      .then(w=>NATIVE.Share.share({title:name, files:[w.uri], dialogTitle:name}))
+      .then(note, ()=>{});
+    return;
+  }
   try{
     const file=new File([blob],name,{type:'application/json'});
     if(navigator.canShare && navigator.canShare({files:[file]})){
@@ -3312,15 +3328,39 @@ else { draft=newDraft(); view='setup'; }
 render();
 /* ===== Actions globales ============================================== */
 /* Isolé du partage lui-même pour être vérifiable sans navigator.share. */
+const SITE_URL='https://vincentguyader.github.io/skull-king-score/';
 function shareText(){
-  const st=standings(G), rk=ranks(st.tot);
-  let txt='☠ Skull King, '+fdate(Date.now())+'\n';
-  st.tot.forEach((t,i)=>{ txt+=`${rk[i]}. ${t.p.name} : ${t.total} pts\n`; });
-  return txt;
+  const st=standings(G), rk=ranks(st.tot), cfg=G.cfg||{};
+  const medal=r=>['🥇','🥈','🥉'][r-1]||r+'.';
+  const regle=[T.shareRounds(st.played), T.scoring+' '+(cfg.scoring==='rascal'?T.rascalName:T.classic)];
+  if(cfg.ext) regle.push(T.hExtTitle);
+  const top=leaders(st.tot);
+  let txt='🏴‍☠️ Skull King · '+T.shareGame(fdate(G.started||G.date||Date.now()))+'\n'+regle.join(' · ')+'\n\n';
+  st.tot.forEach((t,i)=>{ txt+=`${medal(rk[i])} ${t.p.name} : ${t.total} ${T.sharePts}\n`; });
+  if(st.played){
+    txt+='\n'+(top.length>1 ? T.tieWinner(top.map(t=>t.p.name), top[0].total) : T.winner(top[0].p.name, top[0].total))+'\n';
+    /* Meilleure manche : le plus gros gain d'un joueur sur une manche. */
+    let best=null;
+    G.players.forEach(p=>st.per[p.id].forEach((sc,k)=>{ if(!best || sc.total>best.v) best={p, v:sc.total, r:st.idx[k]}; }));
+    if(best && best.v>0) txt+='⭐ '+T.shareBest(best.p.name, sgn(best.v), T.colRound(best.r+1))+'\n';
+    const justes=G.players.map(p=>p.name+' '+st.idx.filter(ri=>{
+      const r=G.rounds[ri]; return r.bids[p.id]!=null && r.bids[p.id]===r.tricks[p.id];
+    }).length+'/'+st.played);
+    txt+='🎯 '+T.accExact+' : '+justes.join(' · ')+'\n';
+  }
+  return txt+'\n'+T.shareBy+'\n'+SITE_URL;
 }
+/* Dans l'application native (Capacitor), le WebView n'offre ni
+   navigator.share ni telechargement par lien : les plugins Share et
+   Filesystem prennent le relais. Sur le web, NATIVE est nul. */
+const NATIVE = (()=>{ try{
+  const C=window.Capacitor;
+  return C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.Share ? C.Plugins : null;
+}catch(e){ return null; } })();
 function shareResult(){
   const txt=shareText();
-  if(navigator.share) navigator.share({text:txt}).catch(()=>{});
+  if(NATIVE) NATIVE.Share.share({text:txt, dialogTitle:T.shareResult}).catch(()=>{});
+  else if(navigator.share) navigator.share({text:txt}).catch(()=>{});
   else { navigator.clipboard && navigator.clipboard.writeText(txt); toast(T.copied); }
 }
 </script>
