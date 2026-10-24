@@ -54,12 +54,22 @@ ignore. Le retirer donne un comportement identique sur les deux plateformes.
 
 ## Plugins natifs
 
-Le WebView d'Android n'offre ni `navigator.share` ni telechargement par lien.
-`@capacitor/share` et `@capacitor/filesystem` prennent le relais : la page les
-trouve sous `window.Capacitor.Plugins` (constante `NATIVE` de `index.html`)
-pour le partage du resultat et l'export de la sauvegarde, ecrite dans le cache
-de l'application puis proposee par la feuille de partage. Sur le web, `NATIVE`
-est nul et rien ne change.
+La page trouve les plugins sous `window.Capacitor.Plugins` (constante `NATIVE`
+de `index.html`). Sur le web, `NATIVE` est nul et rien ne change.
+
+- `@capacitor/share` et `@capacitor/filesystem` : le WebView n'offre ni
+  `navigator.share` ni telechargement par lien. Partage du resultat, et export
+  de la sauvegarde ecrite dans le cache puis proposee par la feuille de partage.
+- `@capacitor/app` : sans ecouteur `backButton`, le retour Android quitte
+  l'application. Il ferme la feuille ouverte, recule d'un ecran, puis a la
+  racine met l'application en arriere-plan.
+- `@capacitor/haptics` : `navigator.vibrate` est absent sur iOS et muet sur
+  Android (pas de permission VIBRATE).
+- `@capacitor-community/keep-awake` : l'API Wake Lock n'est pas garantie dans
+  les WebView ; l'ecran reste allume pendant la saisie d'une manche.
+
+`capacitor.config.json` fixe `SystemBars.style` a `DARK` : icones claires de la
+barre d'etat sur le fond sombre, meme quand le telephone est en theme clair.
 
 Sous Windows, `npx cap sync ios` ecrit des antislashs dans
 `ios/App/CapApp-SPM/Package.swift` : les remplacer par des `/` avant de
