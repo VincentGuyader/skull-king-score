@@ -32,10 +32,13 @@ function ficheExacte(page, racine, nom) {
 
 /** Ouvre le repertoire, lance la fusion de la fiche nommee vers l'autre. */
 async function fusionner(page, absorbee, absorbante) {
-  page.on('dialog', d => d.accept());
   await page.evaluate(() => goRoot('roster'));
   await ficheExacte(page, '#rl', absorbee).locator('.mg').click();
   await ficheExacte(page, '#ml', absorbante).click();
+  /* Une fusion refusee (meme partie jouee) n'ouvre pas de confirmation. */
+  await page.waitForTimeout(100);
+  const ok = page.locator('#askOk');
+  if (await ok.isVisible()) await ok.click();
   await page.waitForTimeout(200);
 }
 

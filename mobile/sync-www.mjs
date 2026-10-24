@@ -10,7 +10,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
 const www = join(here, 'www');
 
-const SW_BLOCK = /if\('serviceWorker' in navigator[^\n]*\{\n[^\n]*serviceWorker\.register[^\n]*\n\}\n/;
+/* \r? : un clone Windows (core.autocrlf) a des fins de ligne CRLF. */
+const SW_BLOCK = /if\('serviceWorker' in navigator[^\r\n]*\{\r?\n[^\r\n]*serviceWorker\.register[^\r\n]*\r?\n\}\r?\n/;
 
 function stripServiceWorker(html) {
   if (!SW_BLOCK.test(html)) {

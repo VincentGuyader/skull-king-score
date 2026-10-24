@@ -67,11 +67,11 @@ test('le chevron de l en tete recule aussi d un ecran', async ({ page }) => {
 });
 
 test('supprimer une partie depuis son detail revient au hall of fame', async ({ page }) => {
-  page.on('dialog', d => d.accept());
   await boot(page, { roster: [ANNE, BOB], archive: [PARTIE] });
   await page.evaluate(() => go('hof'));
   await page.evaluate(() => go('game', 'gN'));
   await page.locator('#gd').click();
+  await page.locator('#askOk').click();
   await page.waitForTimeout(200);
   expect((await head(page)).view, 'retour a la liste').toBe('hof');
   expect(await page.evaluate(() => archive().length), 'la partie est bien supprimee').toBe(0);
