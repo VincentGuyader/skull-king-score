@@ -648,6 +648,12 @@ const NATIVE = (()=>{ try{
   const C=window.Capacitor;
   return C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.Share ? C.Plugins : null;
 }catch(e){ return null; } })();
+const PLATFORM = (()=>{ try{ return window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : 'web'; }catch(e){ return 'web'; } })();
+const SITE_URL='https://vincentguyader.github.io/skull-king-score/';
+const PRIVACY_URL=SITE_URL+'privacy.html';
+/* Le texte partage depuis l'application Android renvoie vers sa fiche Play ;
+   ailleurs (web, iOS), vers le site, qui fonctionne partout. */
+const SHARE_URL = PLATFORM==='android' ? 'https://play.google.com/store/apps/details?id=fr.thinkr.skullkingscore' : SITE_URL;
 
 /* ===== Stockage sûr (localStorage si dispo, sinon mémoire) ============ */
 const Store = (()=>{ let mem={};
@@ -943,7 +949,7 @@ fr:{
   badGames:n=>'Sauvegarde refusée : '+n+' partie'+(n>1?'s sont inexploitables':' est inexploitable')+'. Rien n’a été modifié.',
   copied:'Résultat copié', maxPlayers:n=>n+' joueurs maximum',
   aboutTitle:'À propos et mentions',
-  aboutRepo:'Code source et suivi des demandes sur GitHub',
+  aboutRepo:'Code source et suivi des demandes sur GitHub', aboutPrivacy:'Politique de confidentialité',
   aboutWhat:'Compteur de points non officiel. Tout reste sur votre appareil : aucune donnée n’est envoyée nulle part, et l’application fonctionne hors-ligne.',
   aboutLegal:'Skull King® est une marque déposée de Grandpa Beck’s Games, qui édite le jeu. Cette application est indépendante : elle n’est ni éditée, ni approuvée, ni sponsorisée par l’éditeur. Les règles du jeu restent la propriété de leurs auteurs.',
   storageFull:'Le stockage de l’appareil est plein : vos saisies ne sont plus enregistrées. Exportez la partie avant de fermer l’onglet.',
@@ -1170,7 +1176,7 @@ en:{
   badGames:n=>'Backup rejected: '+n+' game'+(n>1?'s are':' is')+' unusable. Nothing was changed.',
   copied:'Result copied', maxPlayers:n=>n+' players maximum',
   aboutTitle:'About and legal',
-  aboutRepo:'Source code and issue tracker on GitHub',
+  aboutRepo:'Source code and issue tracker on GitHub', aboutPrivacy:'Privacy policy',
   aboutWhat:'Unofficial score keeper. Everything stays on your device: nothing is sent anywhere, and the app works offline.',
   aboutLegal:'Skull King® is a registered trademark of Grandpa Beck’s Games, the publisher of the game. This app is independent: it is not published, endorsed or sponsored by them. The rules of the game remain the property of their authors.',
   storageFull:'Device storage is full: your entries are no longer being saved. Export the game before closing the tab.',
@@ -1396,7 +1402,7 @@ de:{
   badGames:n=>'Sicherung abgelehnt: '+n+' Partie'+(n>1?'n sind':' ist')+' unbrauchbar. Nichts wurde geändert.',
   copied:'Ergebnis kopiert', maxPlayers:n=>'höchstens '+n+' Spieler',
   aboutTitle:'Über und Rechtliches',
-  aboutRepo:'Quellcode und Fehlermeldungen auf GitHub',
+  aboutRepo:'Quellcode und Fehlermeldungen auf GitHub', aboutPrivacy:'Datenschutzerklärung',
   aboutWhat:'Inoffizieller Punktezähler. Alles bleibt auf deinem Gerät: nichts wird irgendwohin gesendet, und die App läuft offline.',
   aboutLegal:'Skull King® ist eine eingetragene Marke von Grandpa Beck’s Games, dem Verlag des Spiels. Diese App ist unabhängig: sie wird vom Verlag weder herausgegeben noch unterstützt oder gesponsert. Die Spielregeln bleiben Eigentum ihrer Urheber.',
   storageFull:'Der Speicher des Geräts ist voll: Eingaben werden nicht mehr gesichert. Exportiere die Partie, bevor du den Tab schließt.',
@@ -1622,7 +1628,7 @@ es:{
   badGames:n=>'Copia rechazada: '+n+' partida'+(n>1?'s son inservibles':' es inservible')+'. No se ha cambiado nada.',
   copied:'Resultado copiado', maxPlayers:n=>n+' jugadores como máximo',
   aboutTitle:'Acerca de y avisos legales',
-  aboutRepo:'Código fuente e incidencias en GitHub',
+  aboutRepo:'Código fuente e incidencias en GitHub', aboutPrivacy:'Política de privacidad',
   aboutWhat:'Contador de puntos no oficial. Todo se queda en tu dispositivo: no se envía nada a ninguna parte y la aplicación funciona sin conexión.',
   aboutLegal:'Skull King® es una marca registrada de Grandpa Beck’s Games, editorial del juego. Esta aplicación es independiente: no está editada, aprobada ni patrocinada por la editorial. Las reglas del juego siguen siendo propiedad de sus autores.',
   storageFull:'El almacenamiento del dispositivo está lleno: tus entradas ya no se guardan. Exporta la partida antes de cerrar la pestaña.',
@@ -2800,6 +2806,7 @@ function renderHelp(){
       <p>${T.aboutWhat}</p>
       <p>${T.aboutLegal}</p>
       <p><a href="https://github.com/VincentGuyader/skull-king-score" target="_blank" rel="noopener noreferrer">${T.aboutRepo}</a></p>
+      <p><a href="${PRIVACY_URL}" target="_blank" rel="noopener noreferrer">${T.aboutPrivacy}</a></p>
     </details>
   </div>`));
 }
@@ -3417,7 +3424,6 @@ else { draft=newDraft(); view='setup'; }
 render();
 /* ===== Actions globales ============================================== */
 /* Isolé du partage lui-même pour être vérifiable sans navigator.share. */
-const SITE_URL='https://vincentguyader.github.io/skull-king-score/';
 function shareText(){
   const st=standings(G), rk=ranks(st.tot), cfg=G.cfg||{};
   const medal=r=>['🥇','🥈','🥉'][r-1]||r+'.';
@@ -3437,7 +3443,7 @@ function shareText(){
     }).length+'/'+st.played);
     txt+='🎯 '+T.accExact+' : '+justes.join(' · ')+'\n';
   }
-  return txt+'\n'+T.shareBy+'\n'+SITE_URL;
+  return txt+'\n'+T.shareBy+'\n'+SHARE_URL;
 }
 function shareResult(){
   const txt=shareText();

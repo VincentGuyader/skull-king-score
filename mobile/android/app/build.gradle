@@ -16,7 +16,7 @@ android {
         /* VERSION_CODE vient de l'integration continue (numero de run), la
            valeur locale sert aux builds manuels. */
         versionCode = Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
-        versionName "1.0.0"
+        versionName "1.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

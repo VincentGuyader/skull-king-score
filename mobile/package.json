@@ -1,6 +1,6 @@
 {
   "name": "skull-king-score-mobile",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Emballage Capacitor (Android / iOS) de Skull King Score. Les assets web viennent de la racine du depot.",
   "type": "module",
