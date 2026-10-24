@@ -58,6 +58,9 @@ h2:first-child{margin-top:6px}
 .small{font-size:13px}
 .tnum{font-variant-numeric:tabular-nums}
 button{font-family:inherit;font-size:16px}
+/* Un appui long (menu d'une ligne joueur) ne doit pas ouvrir la loupe ni
+   la barre de selection de texte. */
+button,.pr,.lead,#bar,header{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .btn{
   display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
   min-height:52px;border-radius:14px;border:0;background:var(--gold);color:#1a1206;
@@ -943,6 +946,8 @@ fr:{
   aboutWhat:'Compteur de points non officiel. Tout reste sur votre appareil : aucune donnée n’est envoyée nulle part, et l’application fonctionne hors-ligne.',
   aboutLegal:'Skull King® est une marque déposée de Grandpa Beck’s Games, qui édite le jeu. Cette application est indépendante : elle n’est ni éditée, ni approuvée, ni sponsorisée par l’éditeur. Les règles du jeu restent la propriété de leurs auteurs.',
   storageFull:'Le stockage de l’appareil est plein : vos saisies ne sont plus enregistrées. Exportez la partie avant de fermer l’onglet.',
+  storageFullApp:'Le stockage du téléphone est plein : vos saisies ne sont plus enregistrées. Exportez la partie avant de quitter l’application.',
+  confirmOk:'Confirmer',
   aLess:'Moins', aMore:'Plus', aBack:'Revenir à l’écran précédent',
   aEdit:'Modifier', aMerge:'Fusionner', aRemove:'Supprimer',
   dupName:'Une autre fiche porte déjà ce prénom. Ajoutez une initiale pour les distinguer.',
@@ -1168,6 +1173,8 @@ en:{
   aboutWhat:'Unofficial score keeper. Everything stays on your device: nothing is sent anywhere, and the app works offline.',
   aboutLegal:'Skull King® is a registered trademark of Grandpa Beck’s Games, the publisher of the game. This app is independent: it is not published, endorsed or sponsored by them. The rules of the game remain the property of their authors.',
   storageFull:'Device storage is full: your entries are no longer being saved. Export the game before closing the tab.',
+  storageFullApp:'Phone storage is full: your entries are no longer being saved. Export the game before closing the app.',
+  confirmOk:'Confirm',
   aLess:'Less', aMore:'More', aBack:'Back to the previous screen',
   aEdit:'Edit', aMerge:'Merge', aRemove:'Delete',
   dupName:'Another profile already uses this name. Add an initial to tell them apart.',
@@ -1392,6 +1399,8 @@ de:{
   aboutWhat:'Inoffizieller Punktezähler. Alles bleibt auf deinem Gerät: nichts wird irgendwohin gesendet, und die App läuft offline.',
   aboutLegal:'Skull King® ist eine eingetragene Marke von Grandpa Beck’s Games, dem Verlag des Spiels. Diese App ist unabhängig: sie wird vom Verlag weder herausgegeben noch unterstützt oder gesponsert. Die Spielregeln bleiben Eigentum ihrer Urheber.',
   storageFull:'Der Speicher des Geräts ist voll: Eingaben werden nicht mehr gesichert. Exportiere die Partie, bevor du den Tab schließt.',
+  storageFullApp:'Der Speicher des Telefons ist voll: Eingaben werden nicht mehr gesichert. Exportiere die Partie, bevor du die App schließt.',
+  confirmOk:'Bestätigen',
   aLess:'Weniger', aMore:'Mehr', aBack:'Zurück zum vorigen Bildschirm',
   aEdit:'Bearbeiten', aMerge:'Zusammenführen', aRemove:'Löschen',
   dupName:'Ein anderes Profil trägt diesen Namen bereits. Ergänze eine Initiale zur Unterscheidung.',
@@ -1616,6 +1625,8 @@ es:{
   aboutWhat:'Contador de puntos no oficial. Todo se queda en tu dispositivo: no se envía nada a ninguna parte y la aplicación funciona sin conexión.',
   aboutLegal:'Skull King® es una marca registrada de Grandpa Beck’s Games, editorial del juego. Esta aplicación es independiente: no está editada, aprobada ni patrocinada por la editorial. Las reglas del juego siguen siendo propiedad de sus autores.',
   storageFull:'El almacenamiento del dispositivo está lleno: tus entradas ya no se guardan. Exporta la partida antes de cerrar la pestaña.',
+  storageFullApp:'El almacenamiento del teléfono está lleno: tus entradas ya no se guardan. Exporta la partida antes de cerrar la aplicación.',
+  confirmOk:'Confirmar',
   aLess:'Menos', aMore:'Más', aBack:'Volver a la pantalla anterior',
   aEdit:'Editar', aMerge:'Fusionar', aRemove:'Eliminar',
   dupName:'Otra ficha ya usa este nombre. Añade una inicial para distinguirlas.',
@@ -1715,6 +1726,15 @@ function goBack(){
   if(history.state && history.state.sk) history.back(); else popBack();
 }
 window.addEventListener('popstate', ()=>{ if(backStack.length) popBack(); });
+/* Retour Android dans l'application : sans ecouteur, Capacitor quitte
+   l'application quel que soit l'ecran. Une feuille ouverte se ferme
+   d'abord, puis on recule d'un ecran, et a la racine l'application passe
+   en arriere-plan comme une application native. */
+if(NATIVE && NATIVE.App) NATIVE.App.addListener('backButton', ()=>{
+  if($('#sheet').classList.contains('open')) closeSheet();
+  else if(backStack.length) goBack();
+  else NATIVE.App.minimizeApp();
+});
 /* Revenir a la racine, c'est aussi rendre au navigateur les entrees qu'on lui
    avait confiees : sinon chaque manche validee laisse une entree orpheline,
    et le bouton precedent tombe dedans sans rien faire. Le nombre a rembobiner
@@ -1813,18 +1833,42 @@ function load(){
 /* ===== Utilitaires UI ================================================ */
 function h(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content; }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function buzz(ms){ try{ navigator.vibrate && navigator.vibrate(ms||8); }catch(e){} }
+/* Dans l'application, navigator.vibrate est absent (iOS) ou muet faute de
+   permission (Android) : le plugin Haptics donne le retour tactile. */
+function buzz(ms){
+  try{
+    if(NATIVE && NATIVE.Haptics){ NATIVE.Haptics.impact({style:(ms||8)>=15?'MEDIUM':'LIGHT'}).catch(()=>{}); return; }
+    navigator.vibrate && navigator.vibrate(ms||8);
+  }catch(e){}
+}
 let toastT;
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2200); }
 function openSheet(html){ $('#sheetBody').innerHTML=''; $('#sheetBody').appendChild(h(html)); $('#sheet').classList.add('open'); $('#scrim').classList.add('open'); }
 function closeSheet(){ $('#sheet').classList.remove('open'); $('#scrim').classList.remove('open'); }
 $('#scrim').onclick = closeSheet;
+/* Confirmation dans une feuille plutot qu'un confirm() : celui du WebView
+   natif affiche OK / Cancel en anglais quelle que soit la langue. Le voile
+   et le geste de retour valent Annuler. */
+function ask(msg, onOk){
+  openSheet(`<div style="margin-bottom:14px">${esc(msg)}</div>
+    <button class="btn danger" id="askOk">${T.confirmOk}</button>
+    <div style="height:8px"></div>
+    <button class="btn ghost sm" id="askNo">${T.cancel}</button>`);
+  $('#askNo').onclick=closeSheet;
+  $('#askOk').onclick=()=>{ closeSheet(); onOk(); };
+}
 function sgn(n){ return (n>0?'+':'')+n; }
 
 /* Garde l'écran allumé pendant la partie */
 let wl=null;
+let nativeAwake=false;
 async function keepAwake(on){
   try{
+    /* L'API Wake Lock n'est pas garantie dans les WebView natifs. */
+    if(NATIVE && NATIVE.KeepAwake){
+      if(on!==nativeAwake){ nativeAwake=on; await (on?NATIVE.KeepAwake.keepAwake():NATIVE.KeepAwake.allowSleep()); }
+      return;
+    }
     if(on && 'wakeLock' in navigator && !wl){ wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release',()=>{wl=null}); }
     else if(!on && wl){ wl.release(); wl=null; }
   }catch(e){}
@@ -1859,7 +1903,7 @@ function paintStorage(){
   const app = $('#app');
   if(!app || !app.parentNode) return;
   const el = h(`<div class="card" id="storageBanner" style="border-color:rgba(240,80,70,.45);background:rgba(240,80,70,.08)">
-    <div class="small" style="color:#ff7d74;margin-bottom:10px">${T.storageFull}</div>
+    <div class="small" style="color:#ff7d74;margin-bottom:10px">${NATIVE?T.storageFullApp:T.storageFull}</div>
     <button class="btn ghost sm" id="stgExp">${T.exportBtn}</button></div>`);
   app.parentNode.insertBefore(el.firstElementChild, app);
   const b = document.getElementById('stgExp');
@@ -2574,7 +2618,7 @@ function renderScores(){
     $('#share').onclick=shareResult;
     btns.appendChild(h(`<div style="height:8px"></div><div class="row" style="gap:8px"><button class="btn ghost sm grow" id="hof2">${T.hofTitle}</button><button class="btn ghost sm grow" id="new">${T.newGame}</button></div>`));
     $('#hof2').onclick=()=>go('hof');
-    $('#new').onclick=()=>{ if(confirm(T.confirmNew)){ Store.del('sk_game'); G=null; draft=newDraft(); goRoot('setup'); } };
+    $('#new').onclick=()=>ask(T.confirmNew, ()=>{ Store.del('sk_game'); G=null; draft=newDraft(); goRoot('setup'); });
     addUndo();
   }
 }
@@ -2841,11 +2885,11 @@ function renderRoster(){
     row.querySelector('.ed').onclick=()=>playerEditSheet(p.id, ()=>render());
     row.querySelector('.mg').onclick=()=>mergeSheet(p.id);
     row.querySelector('.rm').onclick=()=>{
-      if(confirm(T.confirmRemove(p.name))){
+      ask(T.confirmRemove(p.name), ()=>{
         saveRoster(roster().filter(x=>x.id!==p.id));
         draft && (draft.sel=draft.sel.filter(id=>id!==p.id));
         buzz(); render();
-      }
+      });
     };
     rl.appendChild(row);
   });
@@ -2898,9 +2942,10 @@ function mergeSheet(id){
     row.firstElementChild.onclick=()=>{
       const clash=mergeConflicts(id, o.id);
       if(clash.length){ toast(T.mergeSameGame(p.name, o.name, clash.length)); return; }
-      if(!confirm(T.mergeConfirm(p.name, o.name))) return;
-      mergePlayers(id, o.id, o.name);
-      closeSheet(); buzz(20); render();
+      ask(T.mergeConfirm(p.name, o.name), ()=>{
+        mergePlayers(id, o.id, o.name);
+        buzz(20); render();
+      });
     };
     ml.appendChild(row);
   });
@@ -3068,17 +3113,18 @@ function renderGameDetail(gid){
   const btns=$('#barBtns');
   btns.appendChild(h(`<button class="btn ghost sm" id="ge">${g.manual?T.editScores:T.reopenGame}</button>
     <div style="height:8px"></div><button class="btn danger" id="gd">${T.deleteGame}</button>`));
-  $('#gd').onclick=()=>{
-    if(!confirm(T.confirmDelGame)) return;
+  $('#gd').onclick=()=>ask(T.confirmDelGame, ()=>{
     saveArchive(archive().filter(x=>x.id!==gid)); buzz(20); goBack();
-  };
+  });
   $('#ge').onclick=()=>{
     if(g.manual){ manualGameSheet(g); return; }
-    if(G && !G.rounds.every(r=>r.locked) && !confirm(T.confirmReplace)) return;
-    G=JSON.parse(JSON.stringify(g));
-    G.cur=G.rounds.length-1; G.phase='bid';
-    G.players.forEach((p,i)=>p.c=p.c||SERIES[i%SERIES.length]);
-    save(); toast(T.gameReloaded); goRoot('scores');
+    const reprendre=()=>{
+      G=JSON.parse(JSON.stringify(g));
+      G.cur=G.rounds.length-1; G.phase='bid';
+      G.players.forEach((p,i)=>p.c=p.c||SERIES[i%SERIES.length]);
+      save(); toast(T.gameReloaded); goRoot('scores');
+    };
+    if(G && !G.rounds.every(r=>r.locked)) ask(T.confirmReplace, reprendre); else reprendre();
   };
 }
 
@@ -3143,7 +3189,7 @@ function backupSheet(){
     <button class="btn" id="bex">${T.exportBtn}</button>
     <div style="height:8px"></div>
     <button class="btn ghost" id="bim">${T.importBtn}</button>
-    <input type="file" id="bfile" accept="application/json,.json" style="display:none">
+    <input type="file" id="bfile" ${NATIVE?'':'accept="application/json,.json"'} style="display:none">
     <div style="height:12px"></div>
     <div class="small muted">${T.backupCount(archive().length, roster().length)}</div>`);
   $('#bex').onclick=doExport;
@@ -3302,7 +3348,7 @@ $('#hMenu').onclick=()=>{
     b('mRules').onclick=()=>{ closeSheet(); setTimeout(rulesSheet, 240); };
     b('mShare').onclick=()=>{closeSheet(); shareResult();};
   }
-  b('mNew').onclick=()=>{ if(confirm(T.confirmAbandon)){ closeSheet(); Store.del('sk_game'); G=null; draft=newDraft(); goRoot('setup'); } };
+  b('mNew').onclick=()=>ask(T.confirmAbandon, ()=>{ Store.del('sk_game'); G=null; draft=newDraft(); goRoot('setup'); });
 };
 /* Seule la courbe depend de la largeur de la fenetre. Un rendu complet
    ramenait en haut de page a chaque redimensionnement, et sur mobile le
