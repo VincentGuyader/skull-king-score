@@ -243,6 +243,7 @@ table tr.cards th{font-weight:600;color:var(--muted);border-bottom:1px solid var
 .rule:last-child{border-bottom:0}
 .rule .lbl{flex:1;min-width:0}
 .rule .lbl small{display:block;color:var(--muted);font-size:12.5px}
+.mini[disabled]{opacity:.35;cursor:default}
 .mini{width:44px;height:44px;flex:0 0 44px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);font-size:15px;cursor:pointer;display:grid;place-items:center}
 /* ---------- tuiles de statistiques ---------- */
 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px}
@@ -724,7 +725,7 @@ fr:{
   loc:'fr-FR', langName:'Français',
   /* global */
   done:'Terminé', cancel:'Annuler', saveBtn:'Enregistrer', add:'Ajouter', manage:'Gérer',
-  detailBadge:'détail', players:'Joueurs', menu:'Menu', langTitle:'Langue',
+  detailBadge:'détail', players:'Joueurs', playOrder:'Ordre de jeu', playOrderHint:'Le joueur 1 distribue la première manche, puis la donne tourne dans cet ordre.', aUp:n=>'Monter '+n, aDown:n=>'Descendre '+n, menu:'Menu', langTitle:'Langue',
   /* configuration */
   newGame:'Nouvelle partie', playersRange:n=>'Joueurs (2 à '+n+')',
   noRoster:"Aucun joueur enregistré. Créez-les une fois, ils seront proposés à chaque partie et suivis dans le hall of fame.",
@@ -967,7 +968,7 @@ fr:{
 en:{
   loc:'en-GB', langName:'English',
   done:'Done', cancel:'Cancel', saveBtn:'Save', add:'Add', manage:'Manage',
-  detailBadge:'detail', players:'Players', menu:'Menu', langTitle:'Language',
+  detailBadge:'detail', players:'Players', playOrder:'Playing order', playOrderHint:'Player 1 deals the first round, then the deal passes in this order.', aUp:n=>'Move '+n+' up', aDown:n=>'Move '+n+' down', menu:'Menu', langTitle:'Language',
   newGame:'New game', playersRange:n=>'Players (2 to '+n+')',
   noRoster:'No players saved yet. Create them once and they will be offered every game and tracked in the hall of fame.',
   newPlayer:'+ New player', inGame:i=>'player '+i, outGame:'not playing',
@@ -1193,7 +1194,7 @@ en:{
 de:{
   loc:'de-DE', langName:'Deutsch',
   done:'Fertig', cancel:'Abbrechen', saveBtn:'Speichern', add:'Hinzufügen', manage:'Verwalten',
-  detailBadge:'Details', players:'Spieler', menu:'Menü', langTitle:'Sprache',
+  detailBadge:'Details', players:'Spieler', playOrder:'Spielreihenfolge', playOrderHint:'Spieler 1 gibt im ersten Durchgang, dann wechselt der Geber in dieser Reihenfolge.', aUp:n=>n+' nach oben', aDown:n=>n+' nach unten', menu:'Menü', langTitle:'Sprache',
   newGame:'Neue Partie', playersRange:n=>'Spieler (2 bis '+n+')',
   noRoster:'Noch keine Spieler gespeichert. Einmal anlegen, danach stehen sie in jeder Partie zur Auswahl und zählen für die Ruhmeshalle.',
   newPlayer:'+ Neuer Spieler', inGame:i=>'Spieler '+i, outGame:'nicht dabei',
@@ -1419,7 +1420,7 @@ de:{
 es:{
   loc:'es-ES', langName:'Español',
   done:'Listo', cancel:'Cancelar', saveBtn:'Guardar', add:'Añadir', manage:'Gestionar',
-  detailBadge:'detalle', players:'Jugadores', menu:'Menú', langTitle:'Idioma',
+  detailBadge:'detalle', players:'Jugadores', playOrder:'Orden de juego', playOrderHint:'El jugador 1 reparte la primera ronda y luego el reparto sigue este orden.', aUp:n=>'Subir a '+n, aDown:n=>'Bajar a '+n, menu:'Menú', langTitle:'Idioma',
   newGame:'Nueva partida', playersRange:n=>'Jugadores (2 a '+n+')',
   noRoster:'Todavía no hay jugadores guardados. Créalos una vez y aparecerán en cada partida, con seguimiento en el salón de la fama.',
   newPlayer:'+ Nuevo jugador', inGame:i=>'jugador '+i, outGame:'fuera de partida',
@@ -1998,6 +1999,7 @@ function renderSetup(){
         <button class="btn ghost sm grow" id="addP">${T.newPlayer}</button>
         <button class="btn ghost sm grow" id="mgP">${T.manage}</button>
       </div>
+      <div id="order"></div>
       <h2>${T.scoring}</h2>
       <div class="card tight">
         <div class="seg" id="segScore">
@@ -2050,6 +2052,28 @@ function renderSetup(){
   if(cp.length) pl.appendChild(h(`<div class="small" style="color:var(--warn);margin:2px 2px 10px">${T.closeColors(cp.map(x=>esc(x[0].name)+' + '+esc(x[1].name)).join(', '))}</div>`));
   $('#addP').onclick=()=>newPlayerSheet(id=>{ if(draft.sel.length<maxPlayers(draft.cfg)) draft.sel.push(id); renderSetup2(); });
   $('#mgP').onclick=()=>go('roster');
+
+  /* Ordre de jeu : celui de la selection, qui fixe aussi le donneur de
+     chaque manche. Les fleches evitent de tout deselectionner pour
+     intervertir deux joueurs. */
+  if(draft.sel.length>=2){
+    const od=$('#order');
+    od.appendChild(h(`<h2>${T.playOrder}</h2><div class="small muted" style="margin:-4px 2px 10px">${T.playOrderHint}</div>`));
+    const swap=(k,d)=>{ const s=draft.sel; [s[k],s[k+d]]=[s[k+d],s[k]]; buzz(); renderSetup2(); };
+    draft.sel.forEach((id,k)=>{
+      const r=RMAP[id]||{id, name:'?'};
+      const row=h(`<div class="pr set" data-id="${esc(id)}">
+        <div class="rank" style="width:22px;text-align:center;color:var(--gold);font-weight:700">${k+1}</div>
+        ${avatar(r,k)}
+        <div class="grow"><div class="nm">${esc(r.name)}</div></div>
+        <button class="mini up" aria-label="${esc(T.aUp(r.name))}" ${k===0?'disabled':''}>↑</button>
+        <button class="mini dn" aria-label="${esc(T.aDown(r.name))}" ${k===draft.sel.length-1?'disabled':''}>↓</button></div>`);
+      const el=row.firstElementChild;
+      el.querySelector('.up').onclick=()=>{ if(k>0) swap(k,-1); };
+      el.querySelector('.dn').onclick=()=>{ if(k<draft.sel.length-1) swap(k,1); };
+      od.appendChild(row);
+    });
+  }
 
   // barème
   $('#scoreDesc').innerHTML = draft.cfg.scoring==='classic'
